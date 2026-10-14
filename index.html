@@ -24,6 +24,7 @@
     --radius: 20px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; }
   body {
     background: var(--bg);
@@ -310,7 +311,7 @@
   <!-- 攤位統計 -->
   <section id="screen-stats" class="screen">
     <div class="card">
-      <h2>📊 今日攤位統計</h2>
+      <h2>📊 攤位統計</h2>
       <p class="muted" id="stats-total"></p>
       <div id="stats-list"></div>
     </div>
@@ -328,6 +329,7 @@
     </div>
     <button class="btn" id="btn-stats-back">回到首頁</button>
     <button class="btn ghost" id="btn-stats-reset">清除統計</button>
+    <p class="muted center" id="stats-cloud-hint" style="margin-top:12px" hidden>雲端資料存在 Google 試算表，要刪除請直接到試算表操作。</p>
   </section>
 
   <div class="footer">
@@ -342,6 +344,8 @@ const CONFIG = {
   orgName: "貓掌守護聯盟",
   shareUrl: "",            // 留空則分享目前網址
   autoResetSeconds: 180,   // 結果頁閒置多久後自動回到首頁（0 = 關閉）
+  cloudUrl: "",            // Google Apps Script 網頁應用程式網址（見 README），留空則只存在本機
+  maxRecords: 1000,        // 最多保留幾筆紀錄
 };
 
 /* ===== 貓咪外觀（SVG 產生器） ===== */
@@ -657,16 +661,58 @@ document.querySelectorAll(".pledge input").forEach((c) =>
   })
 );
 
-/* ===== 攤位統計（存在本機瀏覽器） ===== */
+/* ===== 攤位統計：本機一定會存一份；有設定 cloudUrl 時同步到 Google 試算表 ===== */
 const STAT_KEY = "catquiz-records";
-function loadRecords() {
-  try { return JSON.parse(localStorage.getItem(STAT_KEY)) || []; } catch { return []; }
+const PENDING_KEY = "catquiz-pending";
+function loadList(k) {
+  try { return JSON.parse(localStorage.getItem(k)) || []; } catch { return []; }
 }
+function saveList(k, list) {
+  try { localStorage.setItem(k, JSON.stringify(list.slice(-CONFIG.maxRecords))); } catch {}
+}
+function loadRecords() { return loadList(STAT_KEY); }
 function recordStat(key) {
-  const list = loadRecords();
-  list.push({ nick: profile.nick, age: profile.age, region: profile.region, type: key, time: Date.now() });
-  try { localStorage.setItem(STAT_KEY, JSON.stringify(list)); } catch {}
+  const rec = { nick: profile.nick, age: profile.age, region: profile.region, type: key, time: Date.now() };
+  saveList(STAT_KEY, [...loadRecords(), rec]);
+  if (CONFIG.cloudUrl) {
+    saveList(PENDING_KEY, [...loadList(PENDING_KEY), rec]);
+    sendPending();
+  }
 }
+// 沒網路時先排隊，下次有網路再補送
+let sending = false;
+async function sendPending() {
+  if (!CONFIG.cloudUrl || sending) return;
+  sending = true;
+  try {
+    let queue = loadList(PENDING_KEY);
+    while (queue.length) {
+      const rec = queue[0];
+      // text/plain + no-cors：不觸發 CORS 預檢，Apps Script 一樣收得到
+      await fetch(CONFIG.cloudUrl, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(rec) });
+      queue = loadList(PENDING_KEY).filter((r) => !(r.time === rec.time && r.nick === rec.nick));
+      saveList(PENDING_KEY, queue);
+    }
+  } catch {
+    // 網路不通，留在佇列中
+  } finally {
+    sending = false;
+  }
+}
+async function loadCloudRecords() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const res = await fetch(CONFIG.cloudUrl, { signal: ctrl.signal });
+    const data = await res.json();
+    if (!data.ok || !Array.isArray(data.records)) throw new Error("bad data");
+    return data.records;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+window.addEventListener("online", sendPending);
+sendPending();
 function esc(t) {
   return String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -674,8 +720,30 @@ function barRow(label, n, total, art = "") {
   const pct = total ? (n / total) * 100 : 0;
   return `<div class="stats-row"${art ? "" : ' style="grid-template-columns:1fr 40px"'}>${art}<div><div>${label}</div><div class="bar"><div style="width:${pct}%"></div></div></div><b>${n}</b></div>`;
 }
-function renderStats() {
-  const list = loadRecords();
+let statsToken = 0;
+async function renderStats() {
+  const token = ++statsToken;
+  $("#btn-stats-reset").hidden = !!CONFIG.cloudUrl;
+  $("#stats-cloud-hint").hidden = !CONFIG.cloudUrl;
+  let list = loadRecords();
+  let source = "這台裝置";
+  if (CONFIG.cloudUrl) {
+    $("#stats-total").textContent = "正在讀取雲端資料…";
+    ["#stats-list", "#stats-age", "#stats-region", "#stats-records"].forEach((id) => ($(id).innerHTML = ""));
+    show("stats");
+    try {
+      list = await loadCloudRecords();
+      source = "雲端（所有裝置）";
+    } catch {
+      source = "這台裝置（無法連線雲端）";
+    }
+    if (token !== statsToken) return;
+  }
+  drawStats(list, source);
+  show("stats");
+}
+function drawStats(list, source) {
+  list = list.slice(-CONFIG.maxRecords);
   const total = list.length;
   const byType = {}, byRegion = {}, byAge = {};
   list.forEach((r) => {
@@ -683,7 +751,8 @@ function renderStats() {
     byRegion[r.region] = (byRegion[r.region] || 0) + 1;
     if (r.age) byAge[r.age] = (byAge[r.age] || 0) + 1;
   });
-  $("#stats-total").textContent = `共 ${total} 人完成測驗`;
+  const pending = CONFIG.cloudUrl ? loadList(PENDING_KEY).length : 0;
+  $("#stats-total").textContent = `共 ${total} 人完成測驗．資料來源：${source}` + (pending ? `．${pending} 筆等待上傳` : "");
   $("#stats-list").innerHTML = Object.keys(TYPES).map((k) => barRow(TYPES[k].name, byType[k] || 0, total, catSVG(TYPES[k].look))).join("");
   $("#stats-age").innerHTML = total
     ? AGES.map((a) => barRow(a, byAge[a] || 0, total)).join("")
@@ -692,15 +761,15 @@ function renderStats() {
   $("#stats-region").innerHTML = regions.length
     ? regions.map((r) => barRow(esc(r), byRegion[r], total)).join("")
     : '<p class="muted">還沒有資料</p>';
-  const recent = list.slice(-30).reverse();
+  const recent = [...list].sort((a, b) => a.time - b.time).slice(-30).reverse();
+  const pad = (n) => String(n).padStart(2, "0");
   $("#stats-records").innerHTML = recent.length
     ? `<table class="records"><thead><tr><th>時間</th><th>年齡</th><th>綽號</th><th>地區</th><th>結果</th></tr></thead><tbody>${recent.map((r) => {
         const d = new Date(r.time);
-        const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-        return `<tr><td>${hm}</td><td>${esc(r.age || "")}</td><td>${esc(r.nick)}</td><td>${esc(r.region)}</td><td>${TYPES[r.type] ? TYPES[r.type].name : ""}</td></tr>`;
+        const when = `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return `<tr><td>${when}</td><td>${esc(r.age || "")}</td><td>${esc(r.nick)}</td><td>${esc(r.region)}</td><td>${TYPES[r.type] ? TYPES[r.type].name : ""}</td></tr>`;
       }).join("")}</tbody></table>`
     : '<p class="muted">還沒有資料</p>';
-  show("stats");
 }
 
 /* ===== 閒置自動回首頁（攤位用） ===== */
@@ -729,7 +798,7 @@ $("#btn-share").addEventListener("click", async (e) => {
   try { await navigator.clipboard.writeText(url); flash("已複製連結！"); } catch { flash(url); }
 });
 $("#btn-stats").addEventListener("click", renderStats);
-$("#btn-stats-back").addEventListener("click", () => show("home"));
+$("#btn-stats-back").addEventListener("click", () => { statsToken++; show("home"); });
 // 清除統計要按兩次，避免誤觸
 let resetArmed = false;
 $("#btn-stats-reset").addEventListener("click", (e) => {
