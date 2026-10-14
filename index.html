@@ -193,6 +193,12 @@
         <input id="f-nick" name="nick" type="text" maxlength="12" autocomplete="off" placeholder="例如：小橘">
       </div>
       <div class="field">
+        <label for="f-age">年齡</label>
+        <select id="f-age" name="age">
+          <option value="">請選擇年齡</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="f-region">居住地區</label>
         <select id="f-region" name="region">
           <option value="">請選擇縣市</option>
@@ -307,6 +313,10 @@
       <h2>📊 今日攤位統計</h2>
       <p class="muted" id="stats-total"></p>
       <div id="stats-list"></div>
+    </div>
+    <div class="card">
+      <h3>🎂 年齡</h3>
+      <div id="stats-age"></div>
     </div>
     <div class="card">
       <h3>📍 居住地區</h3>
@@ -425,6 +435,7 @@ const TYPES = {
     care: [
       ["👀", "看到<b>剪耳貓</b>請友善對待，牠已經絕育，不需要再抓去結紮。"],
       ["🚫", "<b>不要隨意餵食</b>，避免吸引外來貓群聚集，破壞社區的平衡。"],
+      ["🧹", "和鄰居溝通 TNVA/R 的好處，<b>一起維護環境整潔</b>，讓人貓和平共存。"],
       ["📞", "發現新出現、沒剪耳的貓，<b>通報在地動保團體</b>安排 TNVA/R。"],
     ],
   },
@@ -520,12 +531,14 @@ const QUESTIONS = [
 const REGIONS = ["基隆市", "臺北市", "新北市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "臺中市", "彰化縣", "南投縣", "雲林縣",
   "嘉義市", "嘉義縣", "臺南市", "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "臺東縣", "澎湖縣", "金門縣", "連江縣", "海外／其他"];
 
+const AGES = ["12 歲以下", "13–18 歲", "19–29 歲", "30–39 歲", "40–49 歲", "50–59 歲", "60 歲以上"];
+
 /* ===== 狀態與流程 ===== */
 const $ = (s) => document.querySelector(s);
 let current = 0;
 let answers = [];
 let idleTimer = null;
-let profile = { nick: "", region: "" };
+let profile = { nick: "", age: "", region: "" };
 
 document.querySelectorAll("[data-org]").forEach((el) => (el.textContent = CONFIG.orgName));
 $("#hero-cats").innerHTML = ["boss", "shy", "sweet", "guard"].map((k) => catSVG(TYPES[k].look)).join("");
@@ -537,6 +550,7 @@ function show(name) {
   window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
 }
 
+$("#f-age").insertAdjacentHTML("beforeend", AGES.map((a) => `<option value="${a}">${a}</option>`).join(""));
 $("#f-region").insertAdjacentHTML("beforeend", REGIONS.map((r) => `<option value="${r}">${r}</option>`).join(""));
 
 function goProfile() {
@@ -548,13 +562,14 @@ function goProfile() {
 $("#profile-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const nick = $("#f-nick").value.trim();
+  const age = $("#f-age").value;
   const region = $("#f-region").value;
-  const err = !nick ? "請輸入你的綽號" : !region ? "請選擇居住地區" : "";
+  const err = !nick ? "請輸入你的綽號" : !age ? "請選擇年齡" : !region ? "請選擇居住地區" : "";
   $("#f-error").textContent = err;
   $("#f-error").hidden = !err;
   if (err) return;
   $("#f-nick").blur();
-  profile = { nick, region };
+  profile = { nick, age, region };
   start();
 });
 
@@ -649,7 +664,7 @@ function loadRecords() {
 }
 function recordStat(key) {
   const list = loadRecords();
-  list.push({ nick: profile.nick, region: profile.region, type: key, time: Date.now() });
+  list.push({ nick: profile.nick, age: profile.age, region: profile.region, type: key, time: Date.now() });
   try { localStorage.setItem(STAT_KEY, JSON.stringify(list)); } catch {}
 }
 function esc(t) {
@@ -662,23 +677,27 @@ function barRow(label, n, total, art = "") {
 function renderStats() {
   const list = loadRecords();
   const total = list.length;
-  const byType = {}, byRegion = {};
+  const byType = {}, byRegion = {}, byAge = {};
   list.forEach((r) => {
     byType[r.type] = (byType[r.type] || 0) + 1;
     byRegion[r.region] = (byRegion[r.region] || 0) + 1;
+    if (r.age) byAge[r.age] = (byAge[r.age] || 0) + 1;
   });
   $("#stats-total").textContent = `共 ${total} 人完成測驗`;
   $("#stats-list").innerHTML = Object.keys(TYPES).map((k) => barRow(TYPES[k].name, byType[k] || 0, total, catSVG(TYPES[k].look))).join("");
+  $("#stats-age").innerHTML = total
+    ? AGES.map((a) => barRow(a, byAge[a] || 0, total)).join("")
+    : '<p class="muted">還沒有資料</p>';
   const regions = Object.keys(byRegion).sort((a, b) => byRegion[b] - byRegion[a]);
   $("#stats-region").innerHTML = regions.length
     ? regions.map((r) => barRow(esc(r), byRegion[r], total)).join("")
     : '<p class="muted">還沒有資料</p>';
   const recent = list.slice(-30).reverse();
   $("#stats-records").innerHTML = recent.length
-    ? `<table class="records"><thead><tr><th>時間</th><th>綽號</th><th>地區</th><th>結果</th></tr></thead><tbody>${recent.map((r) => {
+    ? `<table class="records"><thead><tr><th>時間</th><th>綽號</th><th>年齡</th><th>地區</th><th>結果</th></tr></thead><tbody>${recent.map((r) => {
         const d = new Date(r.time);
         const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-        return `<tr><td>${hm}</td><td>${esc(r.nick)}</td><td>${esc(r.region)}</td><td>${TYPES[r.type] ? TYPES[r.type].name : ""}</td></tr>`;
+        return `<tr><td>${hm}</td><td>${esc(r.nick)}</td><td>${esc(r.age || "")}</td><td>${esc(r.region)}</td><td>${TYPES[r.type] ? TYPES[r.type].name : ""}</td></tr>`;
       }).join("")}</tbody></table>`
     : '<p class="muted">還沒有資料</p>';
   show("stats");
