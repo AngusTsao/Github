@@ -27,6 +27,9 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html manifest.webmanifest sw.js icons cat-quiz street-cat-quiz _site/
+          # 巷口的貓：每次部署讓瀏覽器重新讀取 config.js（避免拿到舊的設定）
+          sed -i "s#src=\"config.js\"#src=\"config.js?v=${GITHUB_SHA::7}\"#" _site/cat-quiz/index.html
+          grep -q "config.js?v=${GITHUB_SHA::7}" _site/cat-quiz/index.html
           # 每次部署換一個快取版本，已安裝的玩家才會拿到新內容
           sed -i "s/const CACHE = \"straycat-[^\"]*\"/const CACHE = \"straycat-${GITHUB_SHA::7}\"/" _site/sw.js
           grep -q "straycat-${GITHUB_SHA::7}" _site/sw.js

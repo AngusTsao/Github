@@ -22,9 +22,22 @@ const TYPES = { T: "行動派・絕育推手", A: "溫柔的認養家", E: "生�
 const PLEDGES = ["我不棄養，也不讓家貓在外放養", "我會以領養代替購買", "我支持並協助 TNVR/A", "我不隨意餵食街頭的貓", "我會把今天學到的分享給一個人"];
 const MESSAGES_SHOWN = 40;
 
+const VERSION = 2;
+
 function doGet(e) {
+  try { return handleGet_(e); } catch (err) { return json_({ ok: false, error: "server_error", message: String(err) }); }
+}
+function doPost(e) {
+  try { return handlePost_(e); } catch (err) { return json_({ ok: false, error: "server_error", message: String(err) }); }
+}
+
+function handleGet_(e) {
   const col = e.parameter.col;
-  if (!COLUMNS[col]) return json_({ ok: true, service: "cat-quiz" });
+  if (!COLUMNS[col]) {
+    // 連線測試：回報版本與試算表網址
+    const ss = spreadsheet_();
+    return json_({ ok: true, service: "cat-quiz", version: VERSION, sheetName: ss.getName(), sheetUrl: ss.getUrl() });
+  }
   if (col === "players" && e.parameter.key !== ADMIN_KEY) return json_({ error: "unauthorized" });
   const docs = readAll_(col).sort((a, b) => b.data.ts - a.data.ts);
   if (col === "messages") {
@@ -34,7 +47,7 @@ function doGet(e) {
   return json_({ docs: docs.slice(0, 1000) });
 }
 
-function doPost(e) {
+function handlePost_(e) {
   let body;
   try { body = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: "bad_request" }); }
   const col = body.col, id = String(body.id || "");
@@ -113,8 +126,21 @@ function readAll_(col) {
     .filter(d => d && d.data && typeof d.data.ts === "number");
 }
 
+/* 從試算表的「擴充功能 → Apps Script」建立時，直接用那份試算表；
+   若是在 script.google.com 另外建立的獨立專案，就自動建立一份「巷口的貓 統計」試算表並記住它。 */
+function spreadsheet_() {
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty("SHEET_ID");
+  if (id) { try { return SpreadsheetApp.openById(id); } catch (err) {} }
+  const ss = SpreadsheetApp.create("巷口的貓 統計");
+  props.setProperty("SHEET_ID", ss.getId());
+  return ss;
+}
+
 function sheet_(name) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = spreadsheet_();
   let sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
