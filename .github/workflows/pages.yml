@@ -26,7 +26,7 @@ jobs:
       - name: Build site
         run: |
           mkdir _site
-          cp -r index.html manifest.webmanifest sw.js icons cat-quiz _site/
+          cp -r index.html manifest.webmanifest sw.js icons cat-quiz street-cat-quiz _site/
           # 每次部署換一個快取版本，已安裝的玩家才會拿到新內容
           sed -i "s/const CACHE = \"straycat-[^\"]*\"/const CACHE = \"straycat-${GITHUB_SHA::7}\"/" _site/sw.js
           grep -q "straycat-${GITHUB_SHA::7}" _site/sw.js
