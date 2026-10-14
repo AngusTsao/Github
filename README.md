@@ -30,6 +30,7 @@
 | `index.html` | 遊戲本體（畫面、關卡內容、程式） |
 | `manifest.webmanifest` | App 名稱、圖示、全螢幕設定 |
 | `sw.js` | 離線快取 |
+| `.github/workflows/pages.yml` | 自動部署到 GitHub Pages |
 | `icons/` | App 圖示（貓咪左耳剪角＝已結紮的 TNR 記號） |
 
 ## 修改內容
@@ -37,5 +38,10 @@
 所有關卡文字都在 `index.html` 裡的 `SCENES` 陣列，結局類型在 `TYPES`，
 依年齡的建議在 `ageTips()`，可以直接編輯。
 
-修改內容並上線後，請把 `sw.js` 裡的 `CACHE` 版本號加一（例如 `straycat-v2`），
-已安裝的玩家才會拿到新版本。
+## 上線（GitHub Pages）
+
+網址：https://angustsao.github.io/Github/
+
+- 第一次設定：到 repo 的 **Settings → Pages → Build and deployment → Source** 選 **GitHub Actions**
+- 之後每次推送到 `main`，`.github/workflows/pages.yml` 都會自動部署，
+  並自動更新離線快取版本，已安裝的玩家下次開啟就會拿到新內容
