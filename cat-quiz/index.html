@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<title>巷口的貓：守護者測驗</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="結合心理測驗與知識問答的流浪貓議題互動遊戲：測出你是哪一種貓咪守護者，同時認識流浪貓的處境與 TNVR/A。">
+<meta name="theme-color" content="#EEF1EA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131916" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="巷口的貓">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; height: 100%; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: app shell — top bar with progress, one scrollable screen, a fixed bottom action bar with the one big button. */
+:root {
+  --paper: #EEF1EA; --card: #FBFCF8; --ink: #1F2A26; --muted: #5C6962;
+  --tabby: #C2601A; --tabby-soft: #F6E3D2; --leaf: #2C6A49; --leaf-soft: #DCEBE1;
+  --miss: #B0402F; --miss-soft: #F5DEDA; --line: #D3DBD0; --scrim: rgba(20, 28, 24, .55);
+  --display: "Huninn", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #131916; --card: #1C2420; --ink: #E6ECE5; --muted: #9DAAA2;
+  --tabby: #EC9450; --tabby-soft: #3A2A1D; --leaf: #74BC92; --leaf-soft: #1F3328;
+  --miss: #E9806F; --miss-soft: #3B2320; --line: #2E3934; --scrim: rgba(0, 0, 0, .65); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #131916; --card: #1C2420; --ink: #E6ECE5; --muted: #9DAAA2;
+  --tabby: #EC9450; --tabby-soft: #3A2A1D; --leaf: #74BC92; --leaf-soft: #1F3328;
+  --miss: #E9806F; --miss-soft: #3B2320; --line: #2E3934; --scrim: rgba(0, 0, 0, .65); color-scheme: dark; }
+
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.7; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+button, label, .topbar { -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+h1, h2 { font-family: var(--display); font-weight: 400; text-wrap: balance; margin: 0; line-height: 1.35; }
+h1 { font-size: clamp(30px, 8vw, 42px); }
+h2 { font-size: clamp(22px, 5.6vw, 28px); }
+p { margin: 0; }
+
+.shell { height: 100%; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; background: var(--paper); }
+@media (min-width: 640px) { .shell { border-inline: 1px solid var(--line); } }
+
+/* top bar */
+.topbar { flex: none; display: flex; align-items: center; gap: 12px; padding: 10px var(--gutter-r) 10px var(--gutter-l); border-bottom: 1px solid var(--line); background: var(--card); }
+.brand { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 18px; min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand svg { width: 26px; height: 28px; flex: none; }
+.count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.count b { color: var(--ink); }
+.icon-btn { flex: none; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+.icon-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.bar { flex: none; height: 5px; background: var(--line); }
+.bar i { display: block; height: 100%; background: var(--tabby); transition: width .35s ease; }
+
+/* screen */
+.screen { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.inner { padding: 20px var(--gutter-r) 24px var(--gutter-l); display: flex; flex-direction: column; gap: 18px; }
+.eyebrow { font-size: 13px; letter-spacing: .12em; color: var(--muted); font-weight: 500; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: clamp(18px, 5vw, 26px); display: flex; flex-direction: column; gap: 16px; }
+
+.hero { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: end; }
+.hero > div { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.cat { width: 104px; height: auto; }
+.cat .body { fill: var(--ink); } .cat .eye { fill: var(--tabby); } .cat .tail { stroke: var(--ink); }
+.notch-note { font-size: 14.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 12px; line-height: 1.6; }
+.notch-note b { color: var(--tabby); }
+.defs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.defs div { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.defs b { font-family: var(--display); font-weight: 400; font-size: 19px; color: var(--tabby); }
+.defs span { font-size: 14px; color: var(--muted); line-height: 1.55; }
+@media (max-width: 480px) { .defs { grid-template-columns: 1fr; } .cat { width: 80px; } }
+
+.tag { display: inline-flex; align-self: flex-start; font-size: 13px; font-weight: 700; letter-spacing: .06em; padding: 4px 12px; border-radius: 99px; }
+.tag.quiz { background: var(--leaf-soft); color: var(--leaf); }
+.tag.mind { background: var(--tabby-soft); color: var(--tabby); }
+.multi-banner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--tabby); color: var(--card); border-radius: 14px; padding: 12px 18px; }
+.multi-banner .big { font-family: var(--display); font-size: clamp(28px, 7vw, 36px); line-height: 1.1; letter-spacing: .08em; }
+.multi-banner span:last-child { font-size: 15px; font-weight: 500; min-width: 0; flex: 1 1 180px; }
+
+.opts { display: flex; flex-direction: column; gap: 10px; }
+.opt { font: inherit; cursor: pointer; text-align: left; background: var(--card); color: var(--ink); border: 1.5px solid var(--line); border-radius: 16px; padding: 14px 16px; min-height: 58px; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; font-size: 16.5px; line-height: 1.55; transition: transform .1s ease; }
+.opt:active:not(:disabled) { transform: scale(.98); }
+.opt .k { font-family: var(--display); color: var(--muted); font-size: 18px; line-height: 1.4; }
+.opt.picked { border-color: var(--tabby); background: var(--tabby-soft); }
+.opt.right { border-color: var(--leaf); background: var(--leaf-soft); }
+.opt.wrong { border-color: var(--miss); background: var(--miss-soft); }
+.opt.right .k { color: var(--leaf); } .opt.wrong .k { color: var(--miss); }
+.opt:disabled { cursor: default; }
+.opt.multi { grid-template-columns: 26px 26px 1fr; }
+.opt .box { width: 22px; height: 22px; margin-top: 2px; border: 2px solid var(--muted); border-radius: 6px; display: grid; place-items: center; font-size: 15px; font-weight: 700; color: var(--card); }
+.opt.picked .box { background: var(--tabby); border-color: var(--tabby); }
+.opt.right .box { border-color: var(--leaf); } .opt.right.picked .box { background: var(--leaf); }
+.opt.wrong .box { background: var(--miss); border-color: var(--miss); }
+.is-multi .card { border: 2.5px solid var(--tabby); }
+
+.explain { border-left: 4px solid var(--leaf); padding: 4px 0 4px 14px; display: flex; flex-direction: column; gap: 6px; scroll-margin-bottom: 16px; }
+.explain.miss { border-color: var(--miss); }
+.explain strong { font-family: var(--display); font-weight: 400; font-size: 21px; }
+.explain.ok strong { color: var(--leaf); } .explain.miss strong { color: var(--miss); }
+.explain p { font-size: 15.5px; }
+
+.type-badge { display: flex; gap: 16px; align-items: center; }
+.seal { width: 72px; height: 72px; flex: none; border-radius: 50%; background: var(--tabby); color: var(--card); display: grid; place-items: center; font-family: var(--display); font-size: 34px; }
+.score { display: flex; gap: 28px; flex-wrap: wrap; border-block: 1px dashed var(--line); padding-block: 12px; }
+.score div { display: flex; flex-direction: column; }
+.score b { font-family: var(--display); font-weight: 400; font-size: 34px; color: var(--leaf); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.score small { font-size: 18px; color: var(--muted); }
+.score span { font-size: 13px; color: var(--muted); }
+.pledges { display: flex; flex-direction: column; gap: 4px; }
+.pledges label { display: flex; gap: 12px; align-items: center; font-size: 16px; cursor: pointer; min-height: 44px; }
+.pledges input { width: 22px; height: 22px; accent-color: var(--tabby); flex: none; margin: 0; }
+.field-label { font-weight: 700; }
+textarea { font: inherit; font-size: 16px; color: var(--ink); background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px; padding: 12px 14px; resize: none; min-height: 84px; width: 100%; box-sizing: border-box; }
+textarea:focus { border-color: var(--tabby); outline: none; }
+
+.pledge-card { background: var(--tabby-soft); border-radius: 22px; padding: clamp(20px, 6vw, 30px); display: flex; flex-direction: column; gap: 12px; }
+.pledge-card .quote { font-family: var(--display); font-size: clamp(22px, 6vw, 28px); line-height: 1.5; overflow-wrap: anywhere; }
+.pledge-card ul { margin: 0; padding-left: 1.2em; font-size: 15px; color: var(--muted); }
+.fields { display: flex; flex-direction: column; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 700; font-size: 16px; }
+.field label small { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 6px; }
+.field input, .field select { font: inherit; font-size: 17px; color: var(--ink); background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px; min-height: 52px; padding: 0 14px; width: 100%; box-sizing: border-box; }
+.field input:focus, .field select:focus { border-color: var(--tabby); outline: none; }
+.ages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ages button { font: inherit; font-size: 15px; min-height: 48px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; padding: 0 4px; }
+.ages button[aria-pressed="true"] { border-color: var(--tabby); background: var(--tabby-soft); font-weight: 700; }
+@media (max-width: 400px) { .ages { grid-template-columns: repeat(2, 1fr); } }
+.pledge-foot { display: flex; justify-content: space-between; align-items: end; gap: 12px; font-size: 14px; color: var(--muted); }
+.pledge-foot .cat { width: 52px; }
+.foot { font-size: 14px; color: var(--muted); text-align: center; }
+
+/* bottom action bar */
+.actions { flex: none; padding: 12px var(--gutter-r) 14px var(--gutter-l); border-top: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; gap: 6px; }
+.btn { font: inherit; cursor: pointer; width: 100%; min-height: 56px; border-radius: 16px; border: 0; background: var(--tabby); color: var(--card); font-weight: 700; font-size: 18px; letter-spacing: .04em; }
+.btn:active:not(:disabled) { filter: brightness(.95); }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+.action-hint.ok { color: var(--leaf); font-family: var(--display); font-size: 24px; }
+.post-note { font-size: 14px; color: var(--muted); }
+.post-note.ok { color: var(--leaf); } .post-note.fail { color: var(--miss); }
+.action-hint { min-height: 56px; display: grid; place-items: center; color: var(--muted); font-size: 15px; text-align: center; }
+:focus-visible { outline: 3px solid var(--tabby); outline-offset: 3px; }
+
+/* 留言牆（展場大螢幕） */
+.wall { height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: clamp(16px, 2.4vw, 32px); padding: clamp(20px, 3vw, 48px) max(16px, env(safe-area-inset-right, 0px)) clamp(20px, 3vw, 48px) max(16px, env(safe-area-inset-left, 0px)); box-sizing: border-box; }
+.wall-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.wall-head h1 { font-size: clamp(32px, 4.4vw, 64px); }
+.wall-head p { color: var(--muted); font-size: clamp(15px, 1.4vw, 20px); }
+.wall-head .cat { width: clamp(60px, 6vw, 96px); }
+.wall-tools { display: flex; gap: 10px; align-items: center; }
+.wall-count { font-family: var(--display); font-size: clamp(20px, 2vw, 30px); color: var(--tabby); font-variant-numeric: tabular-nums; }
+.notes { columns: 280px; column-gap: clamp(14px, 1.6vw, 24px); }
+.note { break-inside: avoid; margin-bottom: clamp(14px, 1.6vw, 24px); background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: clamp(16px, 1.6vw, 26px); display: flex; flex-direction: column; gap: 10px; }
+.note:nth-child(3n+2) { background: var(--tabby-soft); border-color: transparent; }
+.note:nth-child(5n+4) { background: var(--leaf-soft); border-color: transparent; }
+.note q { font-family: var(--display); font-size: clamp(20px, 1.9vw, 30px); line-height: 1.5; quotes: "「" "」"; overflow-wrap: anywhere; }
+.note.short q { font-size: clamp(26px, 2.6vw, 40px); }
+.note .who { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: clamp(13px, 1.1vw, 16px); color: var(--muted); }
+.note .hide-btn { font: inherit; font-size: 13px; background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 2px 10px; cursor: pointer; }
+.note.new { animation: arrive .7s ease both; }
+@keyframes arrive { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+.wall-empty { border: 2px dashed var(--line); border-radius: 22px; padding: clamp(28px, 4vw, 60px); text-align: center; color: var(--muted); font-size: clamp(16px, 1.6vw, 22px); display: flex; flex-direction: column; gap: 8px; }
+.wall-empty b { font-family: var(--display); font-weight: 400; color: var(--ink); font-size: clamp(22px, 2.4vw, 34px); }
+.btn.small { width: auto; min-height: 44px; padding: 0 20px; font-size: 16px; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { .note.new { animation: none; } }
+
+/* 統計分析 */
+.stats { height: 100%; overflow-y: auto; box-sizing: border-box; padding: clamp(20px, 3vw, 40px) max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); }
+.stats-in { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.stats-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+.stats-head > div:first-child { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.stats-head p { color: var(--muted); font-size: 14px; }
+.stats-tools { display: flex; gap: 10px; flex-wrap: nowrap; align-items: center; }
+.stats-tools .btn.small { width: auto; flex: none; white-space: nowrap; }
+@media (max-width: 560px) { .stats-tools { flex-wrap: wrap; } }
+#stats-body { display: flex; flex-direction: column; gap: 14px; }
+.stats-tools select { font: inherit; font-size: 15px; min-height: 44px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); padding: 0 12px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 18px; display: flex; flex-direction: column; gap: 2px; }
+.kpi span { font-size: 13px; color: var(--muted); letter-spacing: .04em; }
+.kpi b { font-family: var(--display); font-weight: 400; font-size: 34px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.kpi small { font-size: 13px; color: var(--muted); }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel.full { grid-column: 1 / -1; }
+.panel h3 { font-family: var(--display); font-weight: 400; font-size: 20px; margin: 0; }
+.panel .note-line { font-size: 13px; color: var(--muted); margin-top: -6px; }
+.bars { display: flex; flex-direction: column; gap: 4px; }
+.brow { display: grid; grid-template-columns: minmax(70px, 7em) minmax(0, 1fr) 5.2em; gap: 10px; align-items: center; font-size: 14px; padding: 3px 4px; border-radius: 8px; }
+.brow:hover { background: var(--paper); }
+.brow .lab { min-width: 0; overflow-wrap: anywhere; line-height: 1.4; }
+.brow .track { height: 14px; border-left: 1.5px solid var(--line); }
+.brow .fill { height: 100%; background: var(--tabby); border-radius: 0 4px 4px 0; }
+.brow .fill.some { min-width: 3px; }
+.bars.pct .fill { background: var(--leaf); }
+.brow .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.brow .val b { color: var(--ink); font-weight: 700; }
+.bars.wide .brow { grid-template-columns: minmax(0, 1fr) 6.5em; row-gap: 4px; }
+.bars.wide .lab { grid-column: 1 / -1; color: var(--ink); }
+.bars.wide .lab small { color: var(--muted); }
+.stats-empty { border: 2px dashed var(--line); border-radius: 18px; padding: 40px 20px; text-align: center; color: var(--muted); }
+
+/* idle overlay */
+.idle { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; padding: 24px max(24px, env(safe-area-inset-right, 0px)) 24px max(24px, env(safe-area-inset-left, 0px)); z-index: 10; }
+.idle .card { max-width: 360px; width: 100%; box-sizing: border-box; text-align: center; align-items: center; }
+.idle .num { font-family: var(--display); font-size: 56px; color: var(--tabby); line-height: 1; font-variant-numeric: tabular-nums; }
+
+.enter { animation: enter .28s ease both; }
+@keyframes enter { from { opacity: .3; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+.pop { animation: pop .25s ease both; }
+@keyframes pop { from { opacity: .3; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .enter, .pop { animation: none; } .bar i, .opt { transition: none; } }
+</style>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand"><svg viewBox="0 0 130 140" aria-hidden="true" class="cat"><path class="body" d="M30 62 L27 31 L34 26 L47 41 Q60 35 73 41 L94 22 L90 62 Q97 78 88 92 Q102 110 97 134 L23 134 Q18 110 32 92 Q23 78 30 62 Z"/></svg><span>巷口的貓</span></div>
+    <span class="count" id="count"></span>
+    <button class="icon-btn" id="home" aria-label="回到首頁" hidden><svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7M6 9.5V20h12V9.5"/></svg></button>
+    <button class="icon-btn" id="to-stats" aria-label="統計分析" title="統計分析" hidden><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6"/></svg></button>
+    <button class="icon-btn" id="to-wall" aria-label="開啟留言牆" title="開啟留言牆（展場螢幕）" hidden><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4zM8 9h8M8 12h5"/></svg></button>
+    <button class="icon-btn" id="fs" aria-label="全螢幕" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </header>
+  <div class="bar" aria-hidden="true"><i id="barfill" style="width:0"></i></div>
+  <main class="screen" id="screen"></main>
+  <footer class="actions" id="actions"></footer>
+</div>
+
+<div class="wall" id="wall" hidden>
+  <header class="wall-head">
+    <div style="display:flex;gap:16px;align-items:end;min-width:0">
+      <svg class="cat" viewBox="0 0 130 140" aria-hidden="true"><path class="tail" d="M92 128 Q122 124 116 96 Q112 82 120 74" fill="none" stroke-width="9" stroke-linecap="round"/><path class="body" d="M30 62 L27 31 L34 26 L47 41 Q60 35 73 41 L94 22 L90 62 Q97 78 88 92 Q102 110 97 134 L23 134 Q18 110 32 92 Q23 78 30 62 Z"/><ellipse class="eye" cx="48" cy="62" rx="5" ry="6.5"/><ellipse class="eye" cx="72" cy="62" rx="5" ry="6.5"/></svg>
+      <div style="min-width:0"><h1>守護牠們，我想說⋯⋯</h1><p>玩完「巷口的貓」測驗、寫下一句話，就會出現在這面牆上。</p></div>
+    </div>
+    <div class="wall-tools"><span class="wall-count" id="wall-count"></span><button class="btn small ghost" id="wall-back">回到遊戲</button><button class="icon-btn" id="wall-fs" aria-label="全螢幕" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
+  </header>
+  <div id="notes"></div>
+</div>
+
+<div class="stats" id="stats" hidden>
+  <div class="stats-in">
+    <header class="stats-head">
+      <div><span class="eyebrow">巷口的貓・展場數據</span><h1>參與統計</h1><p id="stats-sub"></p></div>
+      <div class="stats-tools">
+        <select id="stats-date" aria-label="選擇日期"><option value="">全部日期</option></select>
+        <button class="btn small" id="stats-csv" hidden>下載 CSV</button>
+        <button class="btn small ghost" id="stats-back">回到遊戲</button>
+      </div>
+    </header>
+    <div id="stats-body"></div>
+  </div>
+</div>
+
+<div class="idle" id="idle" hidden>
+  <div class="card" role="alertdialog" aria-labelledby="idle-title">
+    <h2 id="idle-title">還在玩嗎？</h2>
+    <p style="color:var(--muted)">沒有動作的話，就會回到首頁，換下一位玩家。</p>
+    <div class="num" id="idle-num">15</div>
+    <button class="btn" id="idle-stay">繼續玩</button>
+  </div>
+</div>
+
+<script>
+const CAT_SVG = `<svg class="cat" viewBox="0 0 130 140" aria-hidden="true">
+  <path class="tail" d="M92 128 Q122 124 116 96 Q112 82 120 74" fill="none" stroke-width="9" stroke-linecap="round"/>
+  <path class="body" d="M30 62 L27 31 L34 26 L47 41 Q60 35 73 41 L94 22 L90 62 Q97 78 88 92 Q102 110 97 134 L23 134 Q18 110 32 92 Q23 78 30 62 Z"/>
+  <ellipse class="eye" cx="48" cy="62" rx="5" ry="6.5"/><ellipse class="eye" cx="72" cy="62" rx="5" ry="6.5"/>
+</svg>`;
+
+const TYPES = {
+  T: { seal: "紮", name: "行動派・絕育推手", desc: "看到問題就想動手解決。你適合加入 TNVR/A 誘捕、送醫的志工行列，從源頭讓街頭的貓不再越生越多。" },
+  A: { seal: "家", name: "溫柔的認養家", desc: "你相信每隻貓都值得一個家。以領養代替購買、協助送養會，或成為中途，你能讓「A」真正發生。" },
+  E: { seal: "林", name: "生態守望者", desc: "你看得見貓以外的生命：鳥、蜥蜴、石虎。你會提醒大家家貓不放養，讓人、貓和野生動物各有空間。" },
+  S: { seal: "聲", name: "知識傳聲筒", desc: "你擅長把觀念說清楚。轉傳正確資訊、說服身邊的人不棄養，你的一句話可能改變一隻貓的命運。" }
+};
+
+// kind: "mind" = 心理測驗題（無對錯，計入守護者類型）；"quiz" = 知識題
+const STEPS = [
+  { kind: "mind", q: "下班路上，你看到一隻瘦巴巴的貓在垃圾桶旁翻找食物。你的第一個反應是？", opts: [
+    ["先拍照記錄位置，查查附近有沒有 TNVR 團體", "T"], ["心裡默默盤算：家裡還有沒有空間再多一隻", "A"],
+    ["注意到旁邊草叢有鳥在築巢，有點擔心", "E"], ["發到社區群組，問大家該怎麼處理", "S"] ] },
+  { kind: "quiz", q: "貓在台灣的生態定位為何？", opts: ["台灣原生種", "外來入侵種", "保育類動物", "瀕臨絕種"], ans: [1],
+    ex: "家貓是人類帶來的物種，並非台灣原生。國際自然保護聯盟（IUCN）也將家貓列入「世界百大外來入侵種」。" },
+  { kind: "quiz", q: "流浪貓主要的來源是什麼？", opts: ["人類棄養與走失", "野外自然繁殖", "人類放養"], ans: [0, 2], multi: true,
+    ex: "源頭都是人：被丟棄、走失，或主人讓家貓自由進出（放養）。牠們在街頭繁殖後數量才越來越多。" },
+  { kind: "quiz", tnvr: 1, q: "TNVR/A 是控制流浪貓數量的方法。其中「T」代表什麼？", opts: ["Trap（捕捉）", "Track（追蹤）", "Train（訓練）", "Transfer（轉移）"], ans: [0],
+    ex: "T = Trap，用誘捕籠以人道方式捕捉流浪貓。" },
+  { kind: "quiz", tnvr: 2, q: "TNVR/A 中的「N」代表什麼？", opts: ["Nurse（照護）", "Name（命名）", "Neuter（絕育）", "Notice（注意）"], ans: [2],
+    ex: "N = Neuter，絕育手術。完成絕育的貓，左耳會剪去一小角作為辨識。" },
+  { kind: "quiz", tnvr: 3, q: "TNVR/A 中的「V」代表什麼？", opts: ["Visit（探訪）", "Vaccinate（疫苗）", "View（檢查）", "Value（評估）"], ans: [1],
+    ex: "V = Vaccinate，施打狂犬病等疫苗，保護貓也保護人。" },
+  { kind: "mind", q: "朋友興奮地說，想去寵物店買一隻品種貓。你會？", opts: [
+    ["約他先去收容所或送養會看看", "A"], ["提醒他養貓要負責一輩子，也要記得絕育", "T"],
+    ["叮嚀他：貓要養在室內，不要放出去亂跑", "E"], ["傳一篇棄養數據的文章給他參考", "S"] ] },
+  { kind: "quiz", tnvr: 4, q: "TNVR/A 中的「R」代表什麼？", opts: ["Recover（復原）", "Record（紀錄）", "Report（通報）", "Return（放回）"], ans: [3],
+    ex: "R = Return，術後放回原本生活的地方。" },
+  { kind: "quiz", tnvr: 5, q: "TNVR/A 中的「A」代表什麼？", opts: ["Adjust（調整）", "Accept（接受）", "Adopt（領養）", "Achieve（實現）"], ans: [2],
+    ex: "A = Adopt，親人的貓不放回街頭，而是推動認養，讓牠們有家。" },
+  { kind: "quiz", q: "流浪貓對野生動物的影響，哪些是正確的？", opts: ["沒有影響", "會捕食小型動物", "破壞生態平衡", "造成物種滅絕"], ans: [1, 2, 3], multi: true,
+    ex: "貓是很有效率的掠食者，即使吃飽也會本能地狩獵。在世界各地的島嶼上，貓已造成多種鳥類與小型動物滅絕。" },
+  { kind: "quiz", q: "下列哪一種動物可能受流浪貓影響？", opts: ["鳥類", "爬蟲類", "小型哺乳動物", "石虎", "以上皆是"], ans: [4],
+    ex: "除了被捕食，石虎等野生貓科也可能從流浪貓身上感染疾病，或與牠們競爭食物和棲地。" },
+  { kind: "mind", q: "社區裡有人每天在公園放一大盆飼料給貓吃。你會？", opts: [
+    ["找里長和餵食的鄰居，一起討論做 TNVR", "T"], ["先把親人的貓帶去送養", "A"],
+    ["擔心食物吸引更多貓，也影響公園裡的鳥和松鼠", "E"], ["在社區群組分享正確的餵養觀念", "S"] ] },
+  { kind: "quiz", q: "為什麼不建議隨意餵食流浪貓？", opts: ["吃飽後的貓咪行動力會增強，進而傷害更多小型野生動物", "造成聚集，增加繁殖數量", "讓流浪貓自尊心受損", "不當的餵食方式會造成環境髒亂"], ans: [0, 1, 3], multi: true,
+    ex: "食物會讓貓聚集、繁殖，殘留飼料也會招來蟑螂老鼠。「自尊心」則不是理由。" },
+  { kind: "quiz", q: "長期餵食，卻沒有幫貓絕育，最可能造成什麼問題？", opts: ["貓的數量不斷增加", "貓會變得比較親人", "貓會自己離開", "不會有任何影響"], ans: [0],
+    ex: "一對未絕育的貓，一年可以生下好幾胎。只餵不紮，等於幫貓群持續擴大。" },
+  { kind: "quiz", q: "TNVR/A 最大的限制是什麼？", opts: ["人力不足", "無法完全阻止新貓加入", "費用太高", "操作困難"], ans: [1],
+    ex: "只要還有人棄養、放養，就會有新的貓進到街頭。所以飼主責任和 TNVR/A 一樣重要。" },
+  { kind: "quiz", q: "TNVA 與 TNVR 最大的差異是？", opts: ["有沒有餵食", "是否推動認養", "有沒有結紮", "有沒有紀錄"], ans: [1],
+    ex: "TNVR 把貓放回原地；TNVA 則讓貓被認養，不再回到街頭。" },
+  { kind: "mind", q: "週末多出一整天空閒，你最想去做什麼？", opts: [
+    ["去動保團體當誘捕、送醫志工", "T"], ["去中途之家陪貓，或幫忙辦送養會", "A"],
+    ["參加淺山的石虎棲地導覽", "E"], ["做一張懶人包圖卡，分享到社群", "S"] ] },
+  { kind: "quiz", q: "為什麼流浪貓會影響台灣的生態？", opts: ["牠們是外來掠食者，而且在台灣幾乎沒有天敵", "牠們會吃掉大量植物", "牠們會霸占鳥類的巢", "牠們只吃人類的廚餘"], ans: [0],
+    ex: "本土生物沒有和貓一起演化，不懂得防備；貓在野外又少有天敵，數量很難自然平衡。" },
+  { kind: "quiz", q: "下列哪些是改善流浪貓問題的方法？", opts: ["以領養代替購買", "進行絕育", "飼主幫家貓植入晶片並登記", "以上皆是"], ans: [3],
+    ex: "領養減少需求、絕育減少出生、晶片登記讓走失的貓找得回家，也讓棄養有跡可循。" },
+  { kind: "quiz", q: "流浪貓與野生動物衝突的核心原因是？", opts: ["食物競爭", "棲地重疊", "貓玩弄與獵殺的天性", "以上皆是"], ans: [3],
+    ex: "貓和野生動物搶同一份食物、生活在同一片土地，加上狩獵本能，衝突就難以避免。" },
+  { kind: "quiz", q: "目前解決流浪貓問題的方法是？", opts: ["不隨意餵食流浪貓", "以領養代替購買", "不棄養，加強飼主責任", "協助執行 TNVR/A", "以上皆是"], ans: [4],
+    ex: "沒有單一解方。每個人做一點，街頭的貓就少一點，野生動物也多一點空間。" }
+];
+
+const PLEDGES = ["我不棄養，也不讓家貓在外放養", "我會以領養代替購買", "我支持並協助 TNVR/A", "我不隨意餵食街頭的貓", "我會把今天學到的分享給一個人"];
+
+const AGES = ["12歲以下", "13–18歲", "19–24歲", "25–34歲", "35–44歲", "45–54歲", "55–64歲", "65歲以上"];
+const REGIONS = ["基隆市", "臺北市", "新北市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "臺中市", "彰化縣", "南投縣", "雲林縣", "嘉義市", "嘉義縣", "臺南市", "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "臺東縣", "澎湖縣", "金門縣", "連江縣", "海外"];
+const LETTERS = "ABCDE";
+// 每局最多 10 題：從題庫隨機抽 3 題心理測驗 + 7 題知識題，再打亂順序
+const MAX_STEPS = 10, MIND_PER_GAME = 3;
+// 展場模式：閒置 90 秒跳出提醒，再 15 秒沒動作就回到首頁
+const IDLE_MS = 90000, IDLE_COUNTDOWN = 15;
+
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function drawOrder() {
+  const idx = k => STEPS.map((s, i) => s.kind === k ? i : -1).filter(i => i >= 0);
+  const mind = shuffle(idx("mind")).slice(0, MIND_PER_GAME);
+  const quiz = shuffle(idx("quiz")).slice(0, MAX_STEPS - mind.length);
+  return shuffle([...mind, ...quiz]);
+}
+const cur = () => STEPS[S.order[S.i]];
+const quizCount = () => S.order.filter(i => STEPS[i].kind === "quiz").length;
+const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let S = fresh();
+function fresh() { return { screen: "intro", order: drawOrder(), i: 0, picked: [], revealed: false, correct: 0, tally: { T: 0, A: 0, E: 0, S: 0 }, pledges: [], words: "", posted: "", nick: "", age: "", region: "", answers: {}, minds: {}, playerId: "" }; }
+
+const $ = id => document.getElementById(id);
+const screenEl = $("screen"), actionsEl = $("actions");
+
+function go(screen) { S.screen = screen; render(true); }
+
+function render(enter) {
+  const view = { intro: viewIntro, profile: viewProfile, play: viewStep, pledge: viewPledge, result: viewResult }[S.screen]();
+  screenEl.innerHTML = `<div class="inner ${enter ? "enter" : ""} ${view.cls || ""}">${view.body}</div>`;
+  actionsEl.innerHTML = view.actions;
+  if (enter) screenEl.scrollTop = 0;
+
+  const playing = S.screen === "play";
+  const total = S.order.length;
+  $("count").innerHTML = playing ? `<b>${S.i + 1}</b> / ${total}` : (S.screen === "intro" || S.screen === "profile") ? "" : "完成";
+  $("barfill").style.width = (playing ? (S.i + (S.revealed ? 1 : 0)) / total * 100 : (S.screen === "intro" || S.screen === "profile") ? 0 : 100) + "%";
+  $("home").hidden = S.screen === "intro";
+  view.bind && view.bind();
+}
+
+function viewIntro() {
+  return {
+    body: `
+    <section class="card">
+      <div class="hero">
+        <div>
+          <span class="eyebrow">流浪貓議題・互動測驗</span>
+          <h1>你是哪一種<br>貓咪守護者？</h1>
+          <p>每次隨機抽 10 道題，大約 2 分鐘。有些題目只看直覺，有些考考你對流浪貓的了解。</p>
+        </div>
+        ${CAT_SVG}
+      </div>
+      <p class="notch-note">看看這隻貓的<b>左耳</b>，少了一角。這是「已絕育」的記號：在街頭看到剪耳的貓，代表有人已經為牠做過 TNVR。</p>
+    </section>
+    <section class="card">
+      <h2>街頭的貓，是從哪裡來的？</h2>
+      <div class="defs">
+        <div><b>棄養</b><span>原本有主人，被丟棄或走失後流落街頭。</span></div>
+        <div><b>放養</b><span>有主人，卻讓貓自由進出、在外遊蕩。</span></div>
+        <div><b>野貓</b><span>在街頭或野外出生長大，從沒被人飼養過。</span></div>
+      </div>
+    </section>`,
+    actions: `<button class="btn" id="start">開始測驗</button>`,
+    bind() { $("start").onclick = () => { keepAwake(); go("profile"); }; }
+  };
+}
+
+const profileReady = () => S.nick.trim().length > 0 && AGES.includes(S.age) && REGIONS.includes(S.region);
+
+function viewProfile() {
+  return {
+    body: `
+    <section class="card">
+      <span class="eyebrow">開始之前</span>
+      <h2>先認識一下你</h2>
+      <div class="fields">
+        <div class="field">
+          <label for="nick">暱稱<small>會顯示在承諾卡和留言牆上</small></label>
+          <input id="nick" maxlength="12" autocomplete="off" enterkeyhint="done" placeholder="例如：橘子貓奴" value="${esc(S.nick)}">
+        </div>
+        <div class="field">
+          <label id="age-label">年齡</label>
+          <div class="ages" role="group" aria-labelledby="age-label">${AGES.map(a => `<button type="button" data-age="${a}" aria-pressed="${S.age === a}">${a}</button>`).join("")}</div>
+        </div>
+        <div class="field">
+          <label for="region">居住地區</label>
+          <select id="region"><option value="">請選擇縣市</option>${REGIONS.map(r => `<option ${S.region === r ? "selected" : ""}>${r}</option>`).join("")}</select>
+        </div>
+      </div>
+    </section>`,
+    actions: `<button class="btn" id="go" ${profileReady() ? "" : "disabled"}>開始測驗</button>`,
+    bind() {
+      const sync = () => { $("go").disabled = !profileReady(); };
+      $("nick").oninput = e => { S.nick = e.target.value; sync(); };
+      $("nick").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
+      $("region").onchange = e => { S.region = e.target.value; sync(); };
+      screenEl.querySelectorAll("[data-age]").forEach(b => b.onclick = () => {
+        S.age = b.dataset.age;
+        screenEl.querySelectorAll("[data-age]").forEach(x => x.setAttribute("aria-pressed", x === b));
+        sync();
+      });
+      $("go").onclick = () => { if (profileReady()) { S.nick = S.nick.trim(); go("play"); } };
+    }
+  };
+}
+
+function viewStep() {
+  const st = cur();
+  const isQuiz = st.kind === "quiz", multi = isQuiz && st.multi;
+  const head = multi
+    ? `<div class="multi-banner"><span class="big">複選題</span><span>答案不只一個！全部選好後，按下方「確認答案」</span></div>`
+    : `<span class="tag ${isQuiz ? "quiz" : "mind"}">${isQuiz ? (st.tnvr ? "TNVR/A 解碼" : "知識題") : "心理測驗・憑直覺選"}</span>`;
+  const opts = (isQuiz ? st.opts.map(o => [o]) : st.opts).map((o, k) => {
+    let cls = "opt" + (multi ? " multi" : "");
+    if (S.picked.includes(k)) cls += " picked";
+    if (S.revealed && isQuiz) { if (st.ans.includes(k)) cls += " right"; else if (S.picked.includes(k)) cls += " wrong"; }
+    const box = multi ? `<span class="box" aria-hidden="true">${S.picked.includes(k) ? "✓" : ""}</span>` : "";
+    return `<button class="${cls}" data-k="${k}" ${multi ? `role="checkbox" aria-checked="${S.picked.includes(k)}"` : ""} ${S.revealed ? "disabled" : ""}>${box}<span class="k">${LETTERS[k]}</span><span>${esc(o[0])}</span></button>`;
+  }).join("");
+
+  const ok = isQuiz && S.revealed && sameSet(S.picked, st.ans);
+  const explain = isQuiz && S.revealed && !ok
+    ? `<div class="explain miss pop" id="explain"><strong>正確答案是 ${st.ans.map(k => LETTERS[k]).join("、")}</strong><p>${esc(st.ex)}</p></div>` : "";
+
+  let actions;
+  if (S.revealed && !isQuiz) actions = `<div class="action-hint">收到！</div>`;
+  else if (S.revealed && ok) actions = `<div class="action-hint ok pop">答對了！</div>`;
+  else if (S.revealed) actions = `<button class="btn" id="next">繼續</button>`;
+  else if (multi) actions = `<button class="btn" id="check" ${S.picked.length ? "" : "disabled"}>確認答案${S.picked.length ? `（已選 ${S.picked.length} 個）` : ""}</button>`;
+  else actions = `<div class="action-hint">${isQuiz ? "點選一個答案" : "沒有對錯，選最像你的那一個"}</div>`;
+
+  return {
+    cls: multi ? "is-multi" : "",
+    body: `<section class="card">${head}<h2>${esc(st.q)}</h2><div class="opts">${opts}</div>${explain}</section>`,
+    actions,
+    bind() {
+      screenEl.querySelectorAll(".opt").forEach(b => b.onclick = () => pick(+b.dataset.k));
+      if ($("check")) $("check").onclick = reveal;
+      if ($("next")) $("next").onclick = next;
+      if ($("explain")) $("explain").scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    }
+  };
+}
+
+function pick(k) {
+  const st = cur();
+  if (st.kind === "mind") { S.tally[st.opts[k][1]]++; S.minds[S.order[S.i]] = st.opts[k][1]; S.picked = [k]; S.revealed = true; render(); advanceLater(280); return; }
+  if (st.multi) { S.picked = S.picked.includes(k) ? S.picked.filter(x => x !== k) : [...S.picked, k]; render(); return; }
+  S.picked = [k]; reveal();
+}
+// 答對：短暫顯示綠色後自動往下；答錯：顯示正確答案與解說，按「繼續」
+function reveal() {
+  S.revealed = true;
+  const ok = sameSet(S.picked, cur().ans);
+  if (ok) S.correct++;
+  S.answers[S.order[S.i]] = ok ? 1 : 0;
+  render();
+  if (ok) advanceLater(950);
+}
+function advanceLater(ms) {
+  const at = S.i;
+  setTimeout(() => { if (S.screen === "play" && S.i === at && S.revealed) next(); }, ms);
+}
+function next() {
+  S.picked = []; S.revealed = false;
+  if (S.i < S.order.length - 1) { S.i++; render(true); } else { recordPlayer(); go("pledge"); }
+}
+
+const topType = () => Object.keys(S.tally).reduce((best, k) => S.tally[k] > S.tally[best] ? k : best, "T");
+
+function viewPledge() {
+  const t = TYPES[topType()], n = quizCount();
+  return {
+    body: `
+    <section class="card">
+      <span class="eyebrow">你的守護者類型</span>
+      <div class="type-badge"><div class="seal">${t.seal}</div><h2>${t.name}</h2></div>
+      <p>${t.desc}</p>
+      <div class="score">
+        <div><b>${S.correct}<small> / ${n}</small></b><span>知識題答對</span></div>
+        <div><b>${Math.round(S.correct / Math.max(1, n) * 100)}%</b><span>正確率</span></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>支持與承諾</h2>
+      <p style="color:var(--muted);font-size:15px">守護流浪貓和野生動物，你願意做到哪幾件事？</p>
+      <div class="pledges">${PLEDGES.map((p, k) => `<label><input type="checkbox" id="pl${k}" ${S.pledges.includes(k) ? "checked" : ""}><span>${p}</span></label>`).join("")}</div>
+      <label for="words" class="field-label">最想對大家說的一句話</label>
+      <textarea id="words" maxlength="60" placeholder="例如：剪耳的貓，是有人默默守護過的貓。">${esc(S.words)}</textarea>
+      ${DB ? `<p class="post-note">寫下的話會匿名顯示在展場的留言牆上。</p>` : ""}
+    </section>`,
+    actions: `<button class="btn" id="make">產生我的承諾卡</button>`,
+    bind() {
+      PLEDGES.forEach((_, k) => $("pl" + k).onchange = e => { S.pledges = e.target.checked ? [...S.pledges, k] : S.pledges.filter(x => x !== k); });
+      $("words").oninput = e => S.words = e.target.value;
+      $("make").onclick = () => { updatePlayer(); postMessage(); go("result"); };
+    }
+  };
+}
+
+function viewResult() {
+  const t = TYPES[topType()];
+  const words = S.words.trim() || "守護流浪貓，也守護牠們身邊的每一個生命。";
+  const list = S.pledges.length ? `<ul>${S.pledges.slice().sort().map(k => `<li>${PLEDGES[k]}</li>`).join("")}</ul>` : "";
+  return {
+    body: `
+    <section class="pledge-card">
+      <span class="eyebrow">${esc(S.nick)} 的承諾卡・${t.name}</span>
+      <div class="quote">「${esc(words)}」</div>
+      ${list}
+      <div class="pledge-foot"><span>${esc(S.nick)}・${esc(S.region)}<br>知識題答對 ${S.correct} / ${quizCount()}</span>${CAT_SVG}</div>
+    </section>
+    ${S.posted ? `<p class="post-note ${S.posted} foot">${{ sending: "正在送上留言牆⋯⋯", ok: "你的話已經出現在留言牆上了！", fail: "這次沒能送上留言牆，但承諾卡還是你的。" }[S.posted]}</p>` : ""}
+    <p class="foot">拍下這張卡片，分享給朋友吧！</p>`,
+    actions: `<button class="btn" id="again">換下一位玩家</button>`,
+    bind() { $("again").onclick = reset; }
+  };
+}
+
+function reset() { hideIdle(); S = fresh(); render(true); }
+
+/* ---------- 共享留言牆（db） ---------- */
+let DB = null, USER = null, CAN_EDIT = false;
+const use = n => window.claude?.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+
+async function postMessage() {
+  const words = S.words.trim().slice(0, 60);
+  if (!DB || !words) return;
+  S.posted = "sending";
+  try {
+    await DB.collection("messages").doc().set({ words, type: topType(), nick: S.nick.slice(0, 12), age: S.age, region: S.region, ts: Date.now() });
+    S.posted = "ok";
+  } catch (e) { S.posted = "fail"; }
+  if (S.screen === "result") render();
+}
+
+/* ---------- 每位玩家的作答紀錄（統計用，不含暱稱） ---------- */
+let recordP = Promise.resolve();
+function recordPlayer() {
+  if (!DB || S.playerId) return;
+  const ref = DB.collection("players").doc();
+  S.playerId = ref.id;
+  recordP = ref.set({
+    age: S.age, region: S.region, type: topType(), correct: S.correct, total: quizCount(),
+    answers: S.answers, minds: S.minds, pledges: [], message: false, ts: Date.now()
+  }).catch(() => { S.playerId = ""; });
+}
+async function updatePlayer() {
+  if (!DB || !S.playerId) return;
+  try {
+    await recordP;
+    if (S.playerId) await DB.doc("players/" + S.playerId).update({ pledges: S.pledges.slice().sort(), message: !!S.words.trim() });
+  } catch (e) {}
+}
+
+/* ---------- 統計分析頁 ---------- */
+let DOWNLOADS = null, statsUnsub = null, statsDocs = null, statsErr = false, statsDate = "";
+const dayKey = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+
+function startStats() {
+  if (statsUnsub || !DB) return;
+  statsUnsub = DB.collection("players").orderBy("ts", "desc").limit(1000).onSnapshot(
+    snap => { statsDocs = snap.docs.map(d => d.data() || {}).filter(v => typeof v.ts === "number"); statsErr = false; drawStats(); },
+    () => { statsErr = true; statsUnsub = null; drawStats(); }
+  );
+}
+$("stats-date").onchange = e => { statsDate = e.target.value; drawStats(); };
+
+function barList(rows, { max, fmt, cls = "" }) {
+  const m = max ?? Math.max(1, ...rows.map(r => r.v));
+  return `<div class="bars ${cls}">${rows.map(r => `
+    <div class="brow" title="${esc(r.tip || `${r.label}：${fmt(r)}`)}">
+      <span class="lab">${r.labelHtml || esc(r.label)}</span>
+      <div class="track"><div class="fill${r.v > 0 ? " some" : ""}" style="width:${(r.v / m * 100).toFixed(1)}%"></div></div>
+      <span class="val">${fmt(r)}</span>
+    </div>`).join("")}</div>`;
+}
+
+function drawStats() {
+  const body = $("stats-body");
+  $("stats-csv").hidden = !(DOWNLOADS && statsDocs && statsDocs.length);
+  if (!CAN_EDIT || !DB) { body.innerHTML = `<div class="stats-empty">${!DB ? "這台裝置讀不到資料，請用已登入 claude.ai 的瀏覽器開啟。" : "只有這個頁面的擁有者或編輯者可以查看統計。"}</div>`; return; }
+  if (statsErr) { body.innerHTML = `<div class="stats-empty">資料暫時連不上，請重新整理頁面。</div>`; return; }
+  if (!statsDocs) { body.innerHTML = `<div class="stats-empty">載入資料中⋯⋯</div>`; return; }
+
+  // 日期選單
+  const days = [...new Set(statsDocs.map(v => dayKey(v.ts)))].sort().reverse();
+  if (statsDate && !days.includes(statsDate)) statsDate = "";
+  $("stats-date").innerHTML = `<option value="">全部日期（${statsDocs.length} 人）</option>` +
+    days.map(d => `<option value="${d}" ${d === statsDate ? "selected" : ""}>${d}（${statsDocs.filter(v => dayKey(v.ts) === d).length} 人）</option>`).join("");
+
+  const rows = statsDate ? statsDocs.filter(v => dayKey(v.ts) === statsDate) : statsDocs;
+  $("stats-sub").textContent = `資料即時更新・${statsDate || "全部日期"}・共 ${rows.length} 位玩家完成測驗` + (statsDocs.length >= 1000 ? "（僅顯示最近 1000 筆）" : "");
+  if (!rows.length) { body.innerHTML = `<div class="stats-empty">還沒有人玩完測驗。玩家完成 10 題後，資料就會出現在這裡。</div>`; return; }
+
+  const n = rows.length;
+  const sumC = rows.reduce((a, v) => a + (+v.correct || 0), 0), sumT = rows.reduce((a, v) => a + (+v.total || 0), 0);
+  const msgs = rows.filter(v => v.message).length;
+  const count = (key, list) => list.map(k => ({ label: k, v: rows.filter(v => v[key] === k).length }));
+
+  const ageRows = count("age", AGES);
+  const regionRows = count("region", REGIONS).filter(r => r.v).sort((a, b) => b.v - a.v);
+  const typeRows = Object.keys(TYPES).map(k => ({ label: TYPES[k].name, v: rows.filter(v => v.type === k).length }));
+  const hourRows = [];
+  const hours = rows.map(v => new Date(v.ts).getHours());
+  for (let h = Math.min(...hours); h <= Math.max(...hours); h++) hourRows.push({ label: `${String(h).padStart(2, "0")}:00`, v: hours.filter(x => x === h).length });
+
+  const ageAcc = AGES.map(a => { const g = rows.filter(v => v.age === a); const c = g.reduce((s, v) => s + (+v.correct || 0), 0), t = g.reduce((s, v) => s + (+v.total || 0), 0); return { label: a, v: pct(c, t), n: g.length }; }).filter(r => r.n);
+
+  const qRows = [];
+  STEPS.forEach((st, i) => {
+    if (st.kind !== "quiz") return;
+    const got = rows.map(v => v.answers && v.answers[i]).filter(x => x === 0 || x === 1);
+    if (!got.length) return;
+    const ok = got.filter(x => x === 1).length;
+    qRows.push({ label: st.q, v: pct(ok, got.length), n: got.length, labelHtml: `${esc(st.q)} <small>（${st.multi ? "複選・" : ""}${got.length} 人作答）</small>` });
+  });
+  qRows.sort((a, b) => a.v - b.v);
+
+  const pledgeRows = PLEDGES.map((p, k) => ({ label: p, v: pct(rows.filter(v => Array.isArray(v.pledges) && v.pledges.includes(k)).length, n), raw: rows.filter(v => Array.isArray(v.pledges) && v.pledges.includes(k)).length }));
+
+  const people = r => `<b>${r.v}</b> 人`;
+  body.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><span>完成測驗人數</span><b>${n}</b></div>
+      <div class="kpi"><span>平均答對率</span><b>${pct(sumC, sumT)}%</b><small>共 ${sumT} 題次</small></div>
+      <div class="kpi"><span>留言上牆</span><b>${msgs}</b><small>佔 ${pct(msgs, n)}%</small></div>
+      <div class="kpi"><span>最多人的地區</span><b style="font-size:26px">${regionRows[0] ? esc(regionRows[0].label) : "—"}</b><small>${regionRows[0] ? regionRows[0].v + " 人" : ""}</small></div>
+    </div>
+    <div class="panels">
+      <section class="panel"><h3>年齡分布</h3>${barList(ageRows, { fmt: people })}</section>
+      <section class="panel"><h3>居住地區</h3>${barList(regionRows, { fmt: people })}</section>
+      <section class="panel"><h3>守護者類型</h3>${barList(typeRows, { fmt: r => `<b>${r.v}</b> 人・${pct(r.v, n)}%` })}</section>
+      <section class="panel"><h3>各年齡平均答對率</h3><p class="note-line">只列出有人參與的年齡層</p>${barList(ageAcc, { max: 100, cls: "pct", fmt: r => `<b>${r.v}%</b>・${r.n}人` })}</section>
+      <section class="panel"><h3>參與時段</h3>${barList(hourRows, { fmt: people })}</section>
+      <section class="panel"><h3>承諾勾選比例</h3>${barList(pledgeRows.map(r => ({ ...r })), { max: 100, cls: "pct", fmt: r => `<b>${r.v}%</b>・${r.raw}人` })}</section>
+      <section class="panel full"><h3>各題答對率</h3><p class="note-line">由低到高排列，排在最上面的是最多人答錯、最需要加強宣導的觀念</p>${barList(qRows, { max: 100, cls: "pct wide", fmt: r => `<b>${r.v}%</b> 答對` })}</section>
+    </div>`;
+}
+
+$("stats-csv").onclick = async () => {
+  const rows = statsDate ? statsDocs.filter(v => dayKey(v.ts) === statsDate) : statsDocs;
+  const quizIdx = STEPS.map((s, i) => s.kind === "quiz" ? i : -1).filter(i => i >= 0);
+  const head = ["時間", "年齡", "居住地區", "守護者類型", "答對題數", "作答知識題數", "答對率", "承諾項目", "有留言", ...quizIdx.map((i, k) => `Q${k + 1} ${STEPS[i].q}`)];
+  const cell = x => { const t = String(x ?? ""); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  const lines = rows.slice().sort((a, b) => a.ts - b.ts).map(v => {
+    const d = new Date(v.ts);
+    return [
+      `${dayKey(v.ts)} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+      AGES.includes(v.age) ? v.age : "", REGIONS.includes(v.region) ? v.region : "", TYPES[v.type] ? TYPES[v.type].name : "",
+      +v.correct || 0, +v.total || 0, pct(+v.correct || 0, +v.total || 0) + "%",
+      (Array.isArray(v.pledges) ? v.pledges : []).map(k => PLEDGES[k]).filter(Boolean).join("；"), v.message ? "是" : "否",
+      ...quizIdx.map(i => v.answers && (v.answers[i] === 1 ? "對" : v.answers[i] === 0 ? "錯" : ""))
+    ].map(cell).join(",");
+  });
+  const csv = "﻿" + [head.map(cell).join(","), ...lines].join("\r\n");
+  try { await DOWNLOADS.save({ filename: `巷口的貓-統計-${statsDate || "全部"}.csv`, data: csv }); } catch (e) {}
+};
+
+const isWall = () => location.hash === "#wall";
+let wallUnsub = null, wallDocs = null, wallErr = false;
+const seen = new Set();
+let firstWallDraw = true;
+
+const isStats = () => location.hash === "#stats";
+function route() {
+  const w = isWall(), st = isStats();
+  document.querySelector(".shell").hidden = w || st;
+  $("wall").hidden = !w;
+  $("stats").hidden = !st;
+  if (w) { startWall(); drawWall(); }
+  if (st) { startStats(); drawStats(); }
+}
+addEventListener("hashchange", route);
+$("to-wall").onclick = () => { location.hash = "wall"; };
+$("to-stats").onclick = () => { location.hash = "stats"; };
+$("stats-back").onclick = () => { history.replaceState(null, "", location.pathname + location.search); route(); };
+$("wall-back").onclick = () => { history.replaceState(null, "", location.pathname + location.search); route(); };
+
+function startWall() {
+  if (wallUnsub || !DB) return;
+  wallUnsub = DB.collection("messages").orderBy("ts", "desc").limit(40).onSnapshot(
+    snap => { wallDocs = snap.docs; wallErr = false; drawWall(); },
+    () => { wallErr = true; wallUnsub = null; drawWall(); }
+  );
+}
+
+function drawWall() {
+  const box = $("notes");
+  box.textContent = "";
+  $("wall-count").textContent = wallDocs && wallDocs.length ? `${wallDocs.length} 則留言` : "";
+  if (!DB || wallErr || !wallDocs || !wallDocs.length) {
+    const e = document.createElement("div");
+    e.className = "wall-empty";
+    const b = document.createElement("b"), p = document.createElement("span");
+    if (!DB) { b.textContent = "這台裝置讀不到留言牆"; p.textContent = "請用已登入 claude.ai 的瀏覽器開啟這個頁面。"; }
+    else if (wallErr) { b.textContent = "留言牆暫時連不上"; p.textContent = "請重新整理頁面再試一次。"; }
+    else if (!wallDocs) { b.textContent = "載入留言中⋯⋯"; p.textContent = ""; }
+    else { b.textContent = "還沒有人留言"; p.textContent = "玩完測驗、寫下想說的一句話，就會出現在這裡。"; }
+    e.append(b, p); box.append(e);
+    return;
+  }
+  const wrap = document.createElement("div");
+  wrap.className = "notes";
+  for (const d of wallDocs) {
+    const v = d.data() || {};
+    const words = typeof v.words === "string" ? v.words.slice(0, 60) : "";
+    if (!words) continue;
+    const n = document.createElement("article");
+    n.className = "note" + (words.length <= 16 ? " short" : "") + (!firstWallDraw && !seen.has(d.id) ? " new" : "");
+    seen.add(d.id);
+    const q = document.createElement("q"); q.textContent = words;
+    const who = document.createElement("div"); who.className = "who";
+    const t = document.createElement("span");
+    const nick = typeof v.nick === "string" ? v.nick.slice(0, 12) : "";
+    const region = REGIONS.includes(v.region) ? v.region : "";
+    t.textContent = [nick ? "— " + nick : "", region, TYPES[v.type] ? TYPES[v.type].name : "貓咪守護者"].filter(Boolean).join("・");
+    who.append(t);
+    if (CAN_EDIT) {
+      const h = document.createElement("button");
+      h.className = "hide-btn"; h.textContent = "移除";
+      h.onclick = () => { h.disabled = true; DB.doc("messages/" + d.id).delete().catch(() => { h.disabled = false; }); };
+      who.append(h);
+    }
+    n.append(q, who); wrap.append(n);
+  }
+  firstWallDraw = false;
+  box.append(wrap);
+}
+
+(async () => {
+  [DB, USER] = await Promise.all([use("db"), use("user")]);
+  try { CAN_EDIT = USER ? await USER.canEdit() : false; } catch (e) { CAN_EDIT = false; }
+  $("to-wall").hidden = !(DB && CAN_EDIT);
+  $("to-stats").hidden = !(DB && CAN_EDIT);
+  DOWNLOADS = await use("downloads");
+  route();
+  if (S.screen === "pledge") render();
+})();
+$("home").onclick = reset;
+
+/* 全螢幕（瀏覽器支援時才顯示按鈕） */
+const fsBtn = $("fs");
+if (document.fullscreenEnabled) {
+  fsBtn.hidden = false;
+  fsBtn.onclick = () => {
+    const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    p && p.catch && p.catch(() => {});
+  };
+  $("wall-fs").hidden = false;
+  $("wall-fs").onclick = fsBtn.onclick;
+}
+
+/* 螢幕常亮：展場平板不會自動休眠 */
+let lock = null;
+function keepAwake() { try { navigator.wakeLock?.request("screen").then(l => lock = l).catch(() => {}); } catch (e) {} }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && lock) keepAwake(); });
+
+/* 閒置自動回首頁 */
+let lastAct = Date.now(), countdown = 0;
+const idleEl = $("idle");
+["pointerdown", "keydown", "input", "wheel", "touchstart"].forEach(ev => addEventListener(ev, () => { lastAct = Date.now(); }, { passive: true }));
+function hideIdle() { idleEl.hidden = true; countdown = 0; lastAct = Date.now(); }
+$("idle-stay").onclick = hideIdle;
+setInterval(() => {
+  if (S.screen === "intro" || isWall() || isStats()) return;
+  if (!idleEl.hidden) {
+    countdown--; $("idle-num").textContent = countdown;
+    if (countdown <= 0) reset();
+  } else if (Date.now() - lastAct > IDLE_MS) {
+    countdown = IDLE_COUNTDOWN; $("idle-num").textContent = countdown; idleEl.hidden = false;
+  }
+}, 1000);
+
+window.claude?.hot?.snapshot?.(() => S);
+function start(data) {
+  if (data && data.screen && Array.isArray(data.order)) S = Object.assign(fresh(), data);
+  route(); render();
+  if (S.screen === "play" && S.revealed && (cur().kind === "mind" || sameSet(S.picked, cur().ans))) advanceLater(300);
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
