@@ -45,3 +45,23 @@
 - 第一次設定：到 repo 的 **Settings → Pages → Build and deployment → Source** 選 **GitHub Actions**
 - 之後每次推送到 `main`，`.github/workflows/pages.yml` 都會自動部署，
   並自動更新離線快取版本，已安裝的玩家下次開啟就會拿到新內容
+
+---
+
+# 巷口的貓：守護者測驗（`cat-quiz/`）
+
+網址：https://angustsao.github.io/Github/cat-quiz/
+
+結合心理測驗與知識問答的展場互動遊戲。每局從題庫隨機抽 10 題（3 題心理測驗＋7 題知識題），
+最後得出「貓咪守護者類型」，並填寫支持與承諾、產生承諾卡。
+
+- 開始前填寫暱稱、年齡區間、居住地區
+- 答對自動進入下一題；答錯才顯示正確答案與解說，按「繼續」
+- 複選題有醒目的「複選題」標示
+- 展場模式：閒置 90 秒提醒、再 15 秒自動回首頁
+
+題目都在 `cat-quiz/index.html` 的 `STEPS` 陣列，守護者類型在 `TYPES`，承諾選項在 `PLEDGES`。
+
+> 留言牆、統計分析與 CSV 匯出需要共享資料庫，只在 claude.ai 版本中提供；
+> GitHub Pages 版本是純網頁，這些功能會自動隱藏，遊戲本身完整可玩。
+
