@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#d9783c"/>
+  <!-- 左耳尖剪平：TNR 已結紮記號 -->
+  <path d="M150 222 L150 150 L176 134 L236 186 Z" fill="#fff4e8"/>
+  <path d="M362 222 L362 120 L276 186 Z" fill="#fff4e8"/>
+  <ellipse cx="256" cy="282" rx="128" ry="112" fill="#fff4e8"/>
+  <ellipse cx="210" cy="272" rx="14" ry="20" fill="#3b2f2a"/>
+  <ellipse cx="302" cy="272" rx="14" ry="20" fill="#3b2f2a"/>
+  <path d="M244 314 h24 l-12 13 z" fill="#d9783c"/>
+  <path d="M256 327 q-10 16 -26 12 M256 327 q10 16 26 12" stroke="#3b2f2a" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M168 312 h-46 M170 328 l-42 12 M344 312 h46 M342 328 l42 12" stroke="#3b2f2a" stroke-width="4" stroke-linecap="round"/>
+</svg>

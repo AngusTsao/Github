@@ -2,9 +2,18 @@
 <html lang="zh-Hant-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>假如你是一隻流浪貓</title>
 <meta name="description" content="一個像心理測驗的小遊戲：扮演一隻流浪貓，認識牠們在街頭會遇到的危險，以及怎麼餵食才是真的幫忙。">
+<meta name="theme-color" content="#fffaf3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#2a2420" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="流浪貓">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
   :root {
     --bg: #f6efe6;
@@ -38,74 +47,125 @@
       --shadow: 0 6px 24px rgba(0, 0, 0, .35);
     }
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
   body {
     background: var(--bg);
     color: var(--ink);
     font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
     line-height: 1.75;
-    min-height: 100vh;
-    padding: 24px 16px 48px;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
-  .wrap { max-width: 640px; margin: 0 auto; }
-  .card {
+  button { font: inherit; touch-action: manipulation; }
+
+  /* ---------- App shell ---------- */
+  .app {
+    display: flex; flex-direction: column;
+    height: 100vh; height: 100dvh;
+    max-width: 480px; margin: 0 auto;
     background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    padding: 28px 24px;
-    box-shadow: var(--shadow);
-    animation: rise .35s ease;
   }
-  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  h1 { font-size: 1.7rem; margin: 0 0 .25em; line-height: 1.35; }
-  h2 { font-size: 1.3rem; margin: 0 0 .6em; line-height: 1.4; }
+  @media (min-width: 520px) {
+    body { padding: 24px 0; }
+    .app { height: calc(100dvh - 48px); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; box-shadow: var(--shadow); }
+  }
+  .topbar {
+    flex: none; position: relative;
+    padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
+    display: flex; align-items: center; gap: 8px; min-height: 52px;
+    border-bottom: 1px solid var(--line); background: var(--card);
+  }
+  .topbar .title { flex: 1; font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon-btn {
+    flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer;
+    background: transparent; color: var(--ink); font-size: 1.1rem; display: grid; place-items: center;
+  }
+  .icon-btn:active { background: var(--accent-soft); }
+  .icon-btn[hidden] { display: none; }
+  .chips { display: flex; gap: 6px; flex: none; }
+  .chip { font-size: .8rem; background: var(--bg); border-radius: 999px; padding: 2px 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .progress-line { position: absolute; left: 0; bottom: -1px; height: 3px; background: var(--accent); transition: width .4s ease; }
+
+  .screen {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding: 24px 20px 28px;
+  }
+  .screen > .page { animation: slide .3s ease; }
+  @keyframes slide { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+
+  .actions {
+    flex: none; display: grid; gap: 10px;
+    padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px);
+    border-top: 1px solid var(--line); background: var(--card);
+  }
+  .actions:empty { display: none; }
+  .actions.row { grid-template-columns: 1fr 1fr; }
+
+  /* ---------- Content ---------- */
+  h1 { font-size: 1.6rem; margin: 0 0 .25em; line-height: 1.35; }
+  h2 { font-size: 1.25rem; margin: 0 0 .6em; line-height: 1.4; }
   p { margin: 0 0 1em; }
   .muted { color: var(--muted); font-size: .92rem; }
-  .art { font-size: 3.4rem; text-align: center; line-height: 1.2; margin-bottom: 12px; }
+  .center { text-align: center; }
+  .art { font-size: 3.4rem; text-align: center; line-height: 1.2; margin: 8px 0 14px; }
+  .hero-icon { display: block; width: 96px; height: 96px; margin: 8px auto 16px; border-radius: 24px; box-shadow: var(--shadow); }
   .tag {
     display: inline-block; font-size: .8rem; color: var(--accent);
-    background: var(--accent-soft); border-radius: 999px; padding: 2px 12px; margin-bottom: 10px;
+    background: var(--accent-soft); border-radius: 999px; padding: 2px 12px; margin-bottom: 6px;
   }
 
   label { display: block; font-weight: 600; margin: 16px 0 6px; }
   input, select {
-    width: 100%; font: inherit; color: var(--ink); background: var(--bg);
-    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+    width: 100%; font: inherit; font-size: 16px; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; appearance: none;
+  }
+  select {
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%;
+    background-size: 6px 6px; background-repeat: no-repeat;
   }
   input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .err { color: var(--bad); font-size: .88rem; min-height: 1.4em; margin-top: 8px; }
+  .err { color: var(--bad); font-size: .88rem; min-height: 1.4em; margin-top: 10px; }
 
   .btn {
-    display: block; width: 100%; font: inherit; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px;
-    padding: 12px 16px; margin-top: 20px;
+    display: block; width: 100%; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 14px;
+    padding: 14px 16px; min-height: 50px;
+    transition: transform .1s;
   }
-  .btn:hover { filter: brightness(1.05); }
+  .btn:active { transform: scale(.98); }
   .btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .btn.small { min-height: 0; padding: 8px 14px; width: auto; display: inline-block; font-size: .9rem; }
 
   .choices { display: grid; gap: 10px; margin-top: 18px; }
   .choice {
-    font: inherit; text-align: left; cursor: pointer; color: var(--ink);
-    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
-    transition: border-color .15s, transform .15s;
+    text-align: left; cursor: pointer; color: var(--ink); line-height: 1.6;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+    display: flex; gap: 10px; align-items: flex-start;
+    transition: border-color .15s, transform .1s, background .15s;
   }
-  .choice:hover, .choice:focus-visible { border-color: var(--accent); transform: translateX(3px); outline: none; }
-  .choice b { color: var(--accent); margin-right: 6px; }
+  .choice:hover, .choice:focus-visible { border-color: var(--accent); outline: none; }
+  .choice:active { transform: scale(.98); background: var(--accent-soft); }
+  .choice b {
+    flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent); color: var(--accent-ink); font-size: .85rem; margin-top: 1px;
+  }
+  .hint { text-align: center; font-size: .82rem; color: var(--muted); margin-top: 16px; }
 
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
   .stat { font-size: .85rem; color: var(--muted); }
   .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 4px; }
   .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .5s ease; }
   .bar.hp > i { background: var(--good); }
-  .progress { font-size: .82rem; color: var(--muted); text-align: right; margin-bottom: 8px; }
 
-  .delta { font-size: .9rem; margin: -4px 0 14px; }
-  .delta span { margin-right: 12px; }
+  .delta { font-size: .95rem; margin: -4px 0 14px; }
+  .delta span { margin-right: 12px; font-weight: 600; }
   .up { color: var(--good); } .down { color: var(--bad); }
 
   .fact {
-    background: var(--fact); color: var(--fact-ink); border-radius: 14px;
+    background: var(--fact); color: var(--fact-ink); border-radius: 16px;
     padding: 14px 16px; margin-top: 8px; font-size: .95rem;
   }
   .fact strong { display: block; margin-bottom: 4px; }
@@ -117,16 +177,49 @@
   ul { padding-left: 1.2em; margin: 0; }
   li { margin-bottom: 6px; }
   .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; }
-  .compare div { background: var(--bg); border-radius: 12px; padding: 12px 8px; }
-  .compare .num { font-size: 1.4rem; font-weight: 700; color: var(--accent); display: block; }
-  footer { text-align: center; font-size: .8rem; color: var(--muted); margin-top: 24px; }
-  @media (max-width: 420px) { .card { padding: 22px 18px; } h1 { font-size: 1.45rem; } }
+  .compare div { background: var(--bg); border-radius: 14px; padding: 12px 8px; font-size: .9rem; }
+  .compare .num { font-size: 1.3rem; font-weight: 700; color: var(--accent); display: block; }
+
+  .resume {
+    display: flex; align-items: center; gap: 12px; background: var(--accent-soft);
+    border-radius: 16px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .resume span { flex: 1; font-size: .92rem; }
+  .install { text-align: center; margin-top: 18px; }
+  .install[hidden] { display: none; }
+  .note { font-size: .78rem; color: var(--muted); text-align: center; margin-top: 24px; }
+
+  /* 對話框 */
+  .sheet-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: end center;
+    z-index: 10; animation: fade .2s ease;
+  }
+  .sheet {
+    width: 100%; max-width: 480px; background: var(--card); border-radius: 22px 22px 0 0;
+    padding: 22px 20px calc(env(safe-area-inset-bottom) + 18px); animation: up .25s ease;
+  }
+  .sheet .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes up { from { transform: translateY(100%); } }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 96px); transform: translateX(-50%);
+    background: var(--ink); color: var(--card); padding: 8px 16px; border-radius: 999px; font-size: .88rem;
+    z-index: 20; animation: fade .2s ease;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div id="app"></div>
-  <footer>本遊戲內容為衛教用途，各地規定請以當地主管機關公告為準。</footer>
+<div class="app">
+  <header class="topbar">
+    <button class="icon-btn" id="homeBtn" aria-label="回到首頁" hidden>⌂</button>
+    <div class="title" id="title">假如你是一隻流浪貓</div>
+    <div class="chips" id="chips"></div>
+    <div class="progress-line" id="progress" style="width:0"></div>
+  </header>
+  <main class="screen" id="screen"></main>
+  <nav class="actions" id="actions"></nav>
 </div>
 
 <script>
@@ -360,36 +453,89 @@ const AGE_GROUPS = [
   { label: "65 歲以上", tier: "adult" }
 ];
 
-const state = { name: "", age: "", tier: "", region: "", region: "", hp: 70, food: 50, traits: { brave: 0, careful: 0, social: 0, solo: 0 }, i: 0 };
+const SAVE_KEY = "straycat-save-v1";
+const freshState = () => ({ name: "", age: "", tier: "", region: "", hp: 70, food: 50, traits: { brave: 0, careful: 0, social: 0, solo: 0 }, i: 0 });
+let state = freshState();
+let installPrompt = null;
 
-const app = document.getElementById("app");
+const $ = id => document.getElementById(id);
+const screen = $("screen");
+const actions = $("actions");
 const clamp = v => Math.max(5, Math.min(100, v));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const regionText = () => state.region === "其他／海外" ? "城市" : state.region;
 const fill = s => s.replaceAll("{region}", esc(regionText())).replaceAll("{name}", esc(state.name));
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-function render(html) {
-  app.innerHTML = `<div class="card">${html}</div>`;
-  window.scrollTo({ top: 0, behavior: "smooth" });
+// ---------- 存檔（瀏覽器不支援時就略過）----------
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (_) {} }
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (_) {} }
+function loadSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    return s && s.name && s.i < SCENES.length ? s : null;
+  } catch (_) { return null; }
 }
 
-function statsBar() {
-  return `
-    <div class="progress">${Math.min(state.i + 1, SCENES.length)} / ${SCENES.length}</div>
-    <div class="stats">
-      <div class="stat">❤️ 體力 ${state.hp}<div class="bar hp"><i style="width:${state.hp}%"></i></div></div>
-      <div class="stat">🍚 飽足 ${state.food}<div class="bar"><i style="width:${state.food}%"></i></div></div>
+// ---------- 畫面框架 ----------
+// opts: { title, game: 顯示關卡進度與數值, home: 顯示回首頁, actions: HTML, row: 按鈕並排 }
+function render(html, opts = {}) {
+  screen.innerHTML = `<div class="page">${html}</div>`;
+  screen.scrollTop = 0;
+  actions.innerHTML = opts.actions || "";
+  actions.classList.toggle("row", !!opts.row);
+  $("title").textContent = opts.title || "假如你是一隻流浪貓";
+  $("homeBtn").hidden = !opts.home;
+  $("chips").innerHTML = opts.game
+    ? `<span class="chip">❤️ ${state.hp}</span><span class="chip">🍚 ${state.food}</span>` : "";
+  $("progress").style.width = opts.game ? `${(state.i + (opts.done ? 1 : 0)) / SCENES.length * 100}%` : "0";
+}
+
+function confirmSheet(text, okText, onOk) {
+  const bg = document.createElement("div");
+  bg.className = "sheet-bg";
+  bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">
+      <p style="margin:0">${text}</p>
+      <div class="btns"><button class="btn ghost" data-a="no">取消</button><button class="btn" data-a="ok">${okText}</button></div>
     </div>`;
+  bg.onclick = e => {
+    const a = e.target.dataset.a;
+    if (e.target === bg || a) bg.remove();
+    if (a === "ok") onOk();
+  };
+  document.body.appendChild(bg);
 }
 
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+$("homeBtn").onclick = () => {
+  if (state.name && state.i < SCENES.length) {
+    confirmSheet("要回到首頁嗎？目前的進度會保留，下次可以繼續。", "回首頁", showStart);
+  } else showStart();
+};
+
+// ---------- 首頁 ----------
 function showStart() {
+  const saved = loadSave();
   render(`
-    <div class="art">🐾</div>
-    <h1>假如你是一隻流浪貓</h1>
-    <p class="muted">這是一個像心理測驗的小遊戲。你將化身為一隻流浪貓，在街頭度過 90 天，做出你的選擇，看看你是哪一種貓——也看看牠們真實的處境。</p>
+    <img class="hero-icon" src="icons/icon.svg" alt="">
+    <h1 class="center">假如你是一隻流浪貓</h1>
+    <p class="muted center">化身為一隻流浪貓，在街頭度過 90 天。<br>做出你的選擇，看看你是哪一種貓——<br>也看看牠們真實的處境。</p>
+    ${saved ? `
+      <div class="resume">
+        <span>🐾 ${esc(saved.name)}，你上次玩到第 ${saved.i + 1} 關</span>
+        <button class="btn small" id="resume">繼續</button>
+      </div>` : ""}
     <form id="form" novalidate>
       <label for="name">暱稱</label>
-      <input id="name" maxlength="12" placeholder="例如：小橘" autocomplete="off">
+      <input id="name" maxlength="12" placeholder="例如：小橘" autocomplete="off" enterkeyhint="next">
       <label for="age">年齡</label>
       <select id="age">
         <option value="">請選擇</option>
@@ -401,44 +547,78 @@ function showStart() {
         ${REGIONS.map(r => `<option>${r}</option>`).join("")}
       </select>
       <div class="err" id="err" role="alert"></div>
-      <button class="btn" type="submit">開始當一隻貓 🐈</button>
-    </form>`);
-  document.getElementById("form").addEventListener("submit", e => {
+    </form>
+    <div class="install" id="install" hidden>
+      <button class="btn small ghost" id="installBtn">📲 安裝到手機主畫面</button>
+    </div>
+    <p class="note">本遊戲內容為衛教用途，各地規定請以當地主管機關公告為準。</p>`,
+    { actions: `<button class="btn" type="submit" form="form">開始當一隻貓 🐈</button>` });
+
+  if (saved) $("resume").onclick = () => { state = saved; showScene(); };
+  updateInstall();
+
+  $("form").addEventListener("submit", e => {
     e.preventDefault();
-    const name = document.getElementById("name").value.trim();
-    const ageGroup = AGE_GROUPS[document.getElementById("age").value];
-    const region = document.getElementById("region").value;
-    const err = document.getElementById("err");
+    const name = $("name").value.trim();
+    const ageGroup = AGE_GROUPS[$("age").value];
+    const region = $("region").value;
+    const err = $("err");
     if (!name) return err.textContent = "請輸入暱稱";
     if (!ageGroup) return err.textContent = "請選擇年齡區間";
     if (!region) return err.textContent = "請選擇居住地區";
-    Object.assign(state, { name, age: ageGroup.label, tier: ageGroup.tier, region, hp: 70, food: 50, i: 0, traits: { brave: 0, careful: 0, social: 0, solo: 0 } });
+    state = { ...freshState(), name, age: ageGroup.label, tier: ageGroup.tier, region };
     showIntro();
   });
 }
 
+function updateInstall() {
+  const box = $("install");
+  if (!box || isStandalone()) return;
+  if (installPrompt || isIOS()) box.hidden = false;
+  $("installBtn").onclick = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+      installPrompt = null;
+      box.hidden = true;
+    } else {
+      confirmSheet("在 Safari 點下方的「分享」按鈕 <b>⎋</b>，再選「<b>加入主畫面</b>」，就可以像 App 一樣打開遊戲。", "知道了", () => {});
+    }
+  };
+}
+
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  installPrompt = e;
+  updateInstall();
+});
+
+// ---------- 遊戲 ----------
 function showIntro() {
+  save();
   render(`
     <div class="art">🌙🐱</div>
     <h2>${esc(state.name)}，閉上眼睛……</h2>
     <p>想像你變成了一隻小小的貓。你的身上沒有項圈，沒有名字，也沒有家。</p>
     <p>你的家，是${esc(regionText())}的一條巷子。</p>
-    <p class="muted">接下來，你會遇到各種狀況。請憑直覺選擇——沒有標準答案，但每個選擇都有後果。</p>
-    <button class="btn" id="go">睜開眼睛</button>`);
-  document.getElementById("go").onclick = showScene;
+    <p class="muted">接下來，你會遇到各種狀況。請憑直覺選擇——沒有標準答案，但每個選擇都有後果。</p>`,
+    { home: true, actions: `<button class="btn" id="go">睜開眼睛</button>` });
+  $("go").onclick = showScene;
 }
 
 function showScene() {
   const s = SCENES[state.i];
+  save();
   render(`
-    ${statsBar()}
     <span class="tag">${s.tag}</span>
     <div class="art">${s.art}</div>
     <p>${fill(s.text)}</p>
     <div class="choices">
-      ${s.choices.map((c, k) => `<button class="choice" data-k="${k}"><b>${"ABC"[k]}</b>${fill(c.text)}</button>`).join("")}
-    </div>`);
-  app.querySelectorAll(".choice").forEach(b => b.onclick = () => choose(+b.dataset.k));
+      ${s.choices.map((c, k) => `<button class="choice" data-k="${k}"><b>${"ABC"[k]}</b><span>${fill(c.text)}</span></button>`).join("")}
+    </div>
+    <p class="hint">點選一個選項</p>`,
+    { title: `第 ${state.i + 1} 關／共 ${SCENES.length} 關`, game: true, home: true });
+  screen.querySelectorAll(".choice").forEach(b => b.onclick = () => choose(+b.dataset.k));
 }
 
 function choose(k) {
@@ -447,6 +627,7 @@ function choose(k) {
   state.hp = clamp(state.hp + (c.fx.hp || 0));
   state.food = clamp(state.food + (c.fx.food || 0));
   for (const t of Object.keys(state.traits)) state.traits[t] += c.fx[t] || 0;
+  if (navigator.vibrate && state.hp < before.hp) navigator.vibrate(30);
   const d = (label, a, b) => {
     const diff = b - a;
     if (!diff) return "";
@@ -454,13 +635,15 @@ function choose(k) {
   };
   const last = state.i === SCENES.length - 1;
   render(`
-    ${statsBar()}
     <h2>結果</h2>
     <div class="delta">${d("❤️ 體力", before.hp, state.hp)}${d("🍚 飽足", before.food, state.food)}</div>
     <p>${fill(c.result)}</p>
-    <div class="fact"><strong>📖 ${c.fact.title}</strong><p>${c.fact.body}</p></div>
-    <button class="btn" id="next">${last ? "看看我是哪一種貓 →" : "繼續 →"}</button>`);
-  document.getElementById("next").onclick = () => {
+    <div class="fact"><strong>📖 ${c.fact.title}</strong><p>${c.fact.body}</p></div>`,
+    {
+      title: `第 ${state.i + 1} 關／共 ${SCENES.length} 關`, game: true, home: true, done: true,
+      actions: `<button class="btn" id="next">${last ? "看看我是哪一種貓 →" : "繼續 →"}</button>`
+    });
+  $("next").onclick = () => {
     state.i++;
     last ? showResult() : showScene();
   };
@@ -489,6 +672,7 @@ function ageTips() {
 }
 
 function showResult() {
+  clearSave();
   const t = state.traits;
   const top = Object.keys(t).reduce((a, b) => (t[b] > t[a] ? b : a));
   const type = TYPES[top];
@@ -496,8 +680,8 @@ function showResult() {
   const region = state.region === "其他／海外" ? "當地" : esc(state.region);
   render(`
     <div class="art">${type.emoji}</div>
-    <p class="muted" style="text-align:center;margin:0">${esc(state.name)}，你是——</p>
-    <h1 class="result-title" style="text-align:center">${type.name}</h1>
+    <p class="muted center" style="margin:0">${esc(state.name)}，你是——</p>
+    <h1 class="result-title center">${type.name}</h1>
     <p>${type.desc}</p>
     <div class="fact"><strong>🔎 真實的街貓</strong><p>${type.real}</p></div>
 
@@ -539,22 +723,27 @@ function showResult() {
       <h3>📍 在${region}需要幫忙時</h3>
       <ul>
         <li>發現受傷、受困的動物，或看到虐待動物的行為：聯絡${region}的動物保護主管機關（各縣市動物保護處／所）。</li>
-        ${state.region === "其他／海外" ? "" : "<li>也可以撥打全國動物保護諮詢專線 <b>1959</b>。</li>"}
+        ${state.region === "其他／海外" ? "" : `<li>也可以撥打全國動物保護諮詢專線 <a href="tel:1959"><b>1959</b></a>。</li>`}
         <li>想認養：可以到${region}的公立動物收容所，或洽詢在地的中途、動保團體。</li>
       </ul>
-    </div>
-
-    <button class="btn" id="share">分享結果</button>
-    <button class="btn ghost" id="again">再玩一次</button>`);
-  document.getElementById("again").onclick = showStart;
-  document.getElementById("share").onclick = async () => {
+    </div>`,
+    {
+      title: "測驗結果", home: true, row: true,
+      actions: `<button class="btn ghost" id="again">再玩一次</button><button class="btn" id="share">分享結果</button>`
+    });
+  $("again").onclick = showStart;
+  $("share").onclick = async () => {
     const text = `我在「假如你是一隻流浪貓」測驗中是「${type.name}」${type.emoji}！一起來看看街貓真實的處境吧。`;
-    const btn = document.getElementById("share");
+    const url = location.href.split("#")[0];
     try {
-      if (navigator.share) await navigator.share({ title: document.title, text, url: location.href });
-      else { await navigator.clipboard.writeText(`${text} ${location.href}`); btn.textContent = "已複製到剪貼簿 ✓"; }
+      if (navigator.share) await navigator.share({ title: document.title, text, url });
+      else { await navigator.clipboard.writeText(`${text} ${url}`); toast("已複製到剪貼簿 ✓"); }
     } catch (_) { /* 使用者取消分享 */ }
   };
+}
+
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 
 showStart();
