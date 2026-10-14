@@ -349,7 +349,18 @@ const TYPES = {
   }
 };
 
-const state = { name: "", age: 0, region: "", hp: 70, food: 50, traits: { brave: 0, careful: 0, social: 0, solo: 0 }, i: 0 };
+const AGE_GROUPS = [
+  { label: "12 歲以下", tier: "kid" },
+  { label: "13～17 歲", tier: "teen" },
+  { label: "18～24 歲", tier: "adult" },
+  { label: "25～34 歲", tier: "adult" },
+  { label: "35～44 歲", tier: "adult" },
+  { label: "45～54 歲", tier: "adult" },
+  { label: "55～64 歲", tier: "adult" },
+  { label: "65 歲以上", tier: "adult" }
+];
+
+const state = { name: "", age: "", tier: "", region: "", region: "", hp: 70, food: 50, traits: { brave: 0, careful: 0, social: 0, solo: 0 }, i: 0 };
 
 const app = document.getElementById("app");
 const clamp = v => Math.max(5, Math.min(100, v));
@@ -380,7 +391,10 @@ function showStart() {
       <label for="name">暱稱</label>
       <input id="name" maxlength="12" placeholder="例如：小橘" autocomplete="off">
       <label for="age">年齡</label>
-      <input id="age" type="number" inputmode="numeric" min="1" max="120" placeholder="請輸入數字">
+      <select id="age">
+        <option value="">請選擇</option>
+        ${AGE_GROUPS.map((g, k) => `<option value="${k}">${g.label}</option>`).join("")}
+      </select>
       <label for="region">居住地區</label>
       <select id="region">
         <option value="">請選擇</option>
@@ -392,13 +406,13 @@ function showStart() {
   document.getElementById("form").addEventListener("submit", e => {
     e.preventDefault();
     const name = document.getElementById("name").value.trim();
-    const age = parseInt(document.getElementById("age").value, 10);
+    const ageGroup = AGE_GROUPS[document.getElementById("age").value];
     const region = document.getElementById("region").value;
     const err = document.getElementById("err");
     if (!name) return err.textContent = "請輸入暱稱";
-    if (!age || age < 1 || age > 120) return err.textContent = "請輸入正確的年齡（1～120）";
+    if (!ageGroup) return err.textContent = "請選擇年齡區間";
     if (!region) return err.textContent = "請選擇居住地區";
-    Object.assign(state, { name, age, region, hp: 70, food: 50, i: 0, traits: { brave: 0, careful: 0, social: 0, solo: 0 } });
+    Object.assign(state, { name, age: ageGroup.label, tier: ageGroup.tier, region, hp: 70, food: 50, i: 0, traits: { brave: 0, careful: 0, social: 0, solo: 0 } });
     showIntro();
   });
 }
@@ -453,13 +467,13 @@ function choose(k) {
 }
 
 function ageTips() {
-  if (state.age < 13) return [
+  if (state.tier === "kid") return [
     "看到街上的貓，可以遠遠地看、輕聲打招呼，不要追牠或硬抱牠。",
     "想要餵貓或帶貓回家，一定要先跟爸爸媽媽或老師討論。",
     "看到有人欺負動物，不要自己上前，馬上告訴身邊的大人。",
     "把今天學到的事，分享給家人和同學聽！"
   ];
-  if (state.age < 18) return [
+  if (state.tier === "teen") return [
     "看到街貓時保持距離，不要為了拍照或好玩去逗弄、追趕牠們。",
     "想餵食的話，記得「定時、定點、定量、吃完收乾淨」，並和家人討論。",
     "可以和同學一起參加動物保護團體的志工活動或校園宣導。",
@@ -517,7 +531,7 @@ function showResult() {
     </div>
 
     <div class="section">
-      <h3>${state.age < 13 ? "小朋友" : esc(state.name)}，你可以這樣做</h3>
+      <h3>${state.tier === "kid" ? "小朋友" : esc(state.name)}，你可以這樣做</h3>
       <ul>${ageTips().map(x => `<li>${x}</li>`).join("")}</ul>
     </div>
 
