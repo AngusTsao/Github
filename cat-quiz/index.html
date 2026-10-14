@@ -12,6 +12,8 @@
 <meta name="apple-mobile-web-app-title" content="巷口的貓">
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<!-- 資料庫設定（Google 試算表網址）放在 config.js -->
+<script src="config.js"></script>
 <style>
 :root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; height: 100%; }
 body { margin: 0; }
@@ -579,6 +581,56 @@ async function postMessage() {
   if (S.screen === "result") render();
 }
 
+/* ---------- GitHub Pages 版：用 Google 試算表（Apps Script）當資料庫 ----------
+   只在 claude.ai 的資料庫不存在、且 config.js 設定了 sheetApi 時啟用。
+   提供與 claude.ai db 相同的一小組介面：collection().doc().set/update、doc().delete、onSnapshot（輪詢）。 */
+function sheetDB(api) {
+  const KEY = "catquiz-admin-key";
+  const getKey = () => { try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; } };
+  const post = async body => {
+    const r = await fetch(api, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok) throw { code: j.error || "unavailable" };
+    return j;
+  };
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  const ref = (col, id) => ({
+    id,
+    set: data => post({ action: "set", col, id, data }),
+    update: data => post({ action: "update", col, id, data }),
+    delete: () => post({ action: "delete", col, id, key: getKey() })
+  });
+  const query = col => {
+    const q = {
+      orderBy: () => q, limit: () => q,
+      onSnapshot(next, err) {
+        let stop = false, ok = false, timer = 0;
+        const tick = async () => {
+          try {
+            const url = api + (api.includes("?") ? "&" : "?") + "col=" + col + (col === "players" ? "&key=" + encodeURIComponent(getKey()) : "") + "&t=" + Date.now();
+            const j = await (await fetch(url)).json();
+            if (j.error) { if (!stop) { stop = true; err && err({ code: j.error }); } return; }
+            ok = true;
+            if (!stop) next({ docs: (j.docs || []).map(d => ({ id: d.id, data: () => d.data })) });
+          } catch (e) {
+            if (!ok && !stop) { stop = true; err && err({ code: "unavailable" }); return; }
+          }
+          if (!stop) timer = setTimeout(tick, col === "players" ? 30000 : 8000);
+        };
+        tick();
+        return () => { stop = true; clearTimeout(timer); };
+      }
+    };
+    return q;
+  };
+  return {
+    kind: "sheet", getKey,
+    setKey(k) { try { localStorage.setItem(KEY, k); } catch (e) {} },
+    collection: col => Object.assign(query(col), { doc: id => ref(col, id || newId()) }),
+    doc: path => { const [c, i] = path.split("/"); return ref(c, i); }
+  };
+}
+
 /* ---------- 每位玩家的作答紀錄（統計用，不含暱稱） ---------- */
 let recordP = Promise.resolve();
 function recordPlayer() {
@@ -599,7 +651,7 @@ async function updatePlayer() {
 }
 
 /* ---------- 統計分析頁 ---------- */
-let DOWNLOADS = null, statsUnsub = null, statsDocs = null, statsErr = false, statsDate = "";
+let DOWNLOADS = null, statsUnsub = null, statsDocs = null, statsErr = false, statsAuthErr = false, statsDate = "";
 const dayKey = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 
@@ -607,7 +659,7 @@ function startStats() {
   if (statsUnsub || !DB) return;
   statsUnsub = DB.collection("players").orderBy("ts", "desc").limit(1000).onSnapshot(
     snap => { statsDocs = snap.docs.map(d => d.data() || {}).filter(v => typeof v.ts === "number"); statsErr = false; drawStats(); },
-    () => { statsErr = true; statsUnsub = null; drawStats(); }
+    e => { if (e && e.code === "unauthorized") statsAuthErr = true; else statsErr = true; statsUnsub = null; drawStats(); }
   );
 }
 $("stats-date").onchange = e => { statsDate = e.target.value; drawStats(); };
@@ -624,8 +676,27 @@ function barList(rows, { max, fmt, cls = "" }) {
 
 function drawStats() {
   const body = $("stats-body");
-  $("stats-csv").hidden = !(DOWNLOADS && statsDocs && statsDocs.length);
-  if (!CAN_EDIT || !DB) { body.innerHTML = `<div class="stats-empty">${!DB ? "這台裝置讀不到資料，請用已登入 claude.ai 的瀏覽器開啟。" : "只有這個頁面的擁有者或編輯者可以查看統計。"}</div>`; return; }
+  $("stats-csv").hidden = !((DOWNLOADS || DB?.kind === "sheet") && statsDocs && statsDocs.length && !statsAuthErr);
+  if (DB?.kind === "sheet" && (!CAN_EDIT || statsAuthErr)) {
+    body.innerHTML = `<form class="stats-empty" id="key-form" style="display:flex;flex-direction:column;gap:12px;align-items:center">
+      <b style="font-family:var(--display);font-weight:400;font-size:22px;color:var(--ink)">請輸入管理密碼</b>
+      <span>就是你在 Google Apps Script 裡設定的 ADMIN_KEY。</span>
+      <input id="admin-key" type="password" autocomplete="current-password" style="font:inherit;font-size:17px;min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);padding:0 14px;width:min(100%,320px);box-sizing:border-box">
+      ${statsAuthErr ? `<span style="color:var(--miss)">密碼不正確，請再試一次。</span>` : ""}
+      <button class="btn small" type="submit">查看統計</button>
+    </form>`;
+    $("key-form").onsubmit = e => {
+      e.preventDefault();
+      const k = $("admin-key").value.trim();
+      if (!k) return;
+      DB.setKey(k); CAN_EDIT = true; statsAuthErr = false; statsDocs = null;
+      if (statsUnsub) statsUnsub(); statsUnsub = null;
+      $("to-wall").hidden = $("to-stats").hidden = false;
+      startStats(); drawStats();
+    };
+    return;
+  }
+  if (!CAN_EDIT || !DB) { body.innerHTML = `<div class="stats-empty">${!DB ? "統計用的資料庫還沒有設定好，或這台裝置沒有權限。" : "只有這個頁面的擁有者或編輯者可以查看統計。"}</div>`; return; }
   if (statsErr) { body.innerHTML = `<div class="stats-empty">資料暫時連不上，請重新整理頁面。</div>`; return; }
   if (!statsDocs) { body.innerHTML = `<div class="stats-empty">載入資料中⋯⋯</div>`; return; }
 
@@ -700,7 +771,13 @@ $("stats-csv").onclick = async () => {
     ].map(cell).join(",");
   });
   const csv = "﻿" + [head.map(cell).join(","), ...lines].join("\r\n");
-  try { await DOWNLOADS.save({ filename: `巷口的貓-統計-${statsDate || "全部"}.csv`, data: csv }); } catch (e) {}
+  const filename = `巷口的貓-統計-${statsDate || "全部"}.csv`;
+  if (DOWNLOADS) { try { await DOWNLOADS.save({ filename, data: csv }); } catch (e) {} return; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = `cat-quiz-stats-${statsDate || "all"}.csv`; // 英文檔名：部分瀏覽器會丟掉中文的下載檔名
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 };
 
 const isWall = () => location.hash === "#wall";
@@ -739,7 +816,7 @@ function drawWall() {
     const e = document.createElement("div");
     e.className = "wall-empty";
     const b = document.createElement("b"), p = document.createElement("span");
-    if (!DB) { b.textContent = "這台裝置讀不到留言牆"; p.textContent = "請用已登入 claude.ai 的瀏覽器開啟這個頁面。"; }
+    if (!DB) { b.textContent = "這台裝置讀不到留言牆"; p.textContent = "留言牆的資料庫還沒有設定好，或這台裝置沒有權限。"; }
     else if (wallErr) { b.textContent = "留言牆暫時連不上"; p.textContent = "請重新整理頁面再試一次。"; }
     else if (!wallDocs) { b.textContent = "載入留言中⋯⋯"; p.textContent = ""; }
     else { b.textContent = "還沒有人留言"; p.textContent = "玩完測驗、寫下想說的一句話，就會出現在這裡。"; }
@@ -776,7 +853,9 @@ function drawWall() {
 
 (async () => {
   [DB, USER] = await Promise.all([use("db"), use("user")]);
-  try { CAN_EDIT = USER ? await USER.canEdit() : false; } catch (e) { CAN_EDIT = false; }
+  const sheetApi = window.CAT_QUIZ_CONFIG && window.CAT_QUIZ_CONFIG.sheetApi;
+  if (!DB && sheetApi) { DB = sheetDB(sheetApi); CAN_EDIT = !!DB.getKey(); }
+  else { try { CAN_EDIT = USER ? await USER.canEdit() : false; } catch (e) { CAN_EDIT = false; } }
   $("to-wall").hidden = !(DB && CAN_EDIT);
   $("to-stats").hidden = !(DB && CAN_EDIT);
   DOWNLOADS = await use("downloads");
