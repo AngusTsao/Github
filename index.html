@@ -150,6 +150,22 @@
   .stats-row svg { width: 48px; height: 48px; }
   .bar { height: 14px; background: var(--line); border-radius: 999px; overflow: hidden; }
   .bar > div { height: 100%; background: var(--brand); }
+
+  /* 基本資料 */
+  .field { display: grid; gap: 6px; margin-bottom: 16px; }
+  .field label { font-weight: 700; }
+  .field input, .field select {
+    width: 100%; font: inherit; font-size: 18px; color: var(--ink);
+    padding: 12px 14px; border: 2px solid var(--line); border-radius: 14px; background: #fff;
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--brand); }
+  .form-error { color: var(--bad); font-weight: 700; }
+  .region-tip { margin: 14px 0 0; padding: 10px 14px; background: var(--soft); border-radius: 12px; font-size: 15px; }
+  .region-tip:empty { display: none; }
+  .records { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .records th, .records td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  .records th { color: var(--muted); font-weight: 700; }
+  .table-wrap { overflow-x: auto; }
 </style>
 </head>
 <body>
@@ -164,7 +180,28 @@
       <p class="muted">9 道小題目，1 分鐘找出你的街貓本命！<br>順便認識牠們在街頭的真實處境，<br>學會用對的方式守護牠們 🐾</p>
       <button class="btn" id="btn-start">開始測驗</button>
     </div>
-    <p class="paw-line center">不餵食・要絕育・不棄養 ── 用 TNVR 讓街貓與社區和平共存</p>
+    <p class="paw-line center">不餵食・要絕育・不棄養 ── 用 TNVA/R 讓街貓與社區和平共存</p>
+  </section>
+
+  <!-- 基本資料 -->
+  <section id="screen-profile" class="screen">
+    <form class="card" id="profile-form" novalidate>
+      <h2>先認識一下你 🐾</h2>
+      <p class="muted">填好後就開始測驗囉！</p>
+      <div class="field">
+        <label for="f-nick">你的綽號</label>
+        <input id="f-nick" name="nick" type="text" maxlength="12" autocomplete="off" placeholder="例如：小橘">
+      </div>
+      <div class="field">
+        <label for="f-region">居住地區</label>
+        <select id="f-region" name="region">
+          <option value="">請選擇縣市</option>
+        </select>
+      </div>
+      <p class="form-error" id="f-error" hidden></p>
+      <button class="btn" type="submit">開始答題</button>
+      <button class="back" type="button" id="btn-profile-back">← 回首頁</button>
+    </form>
   </section>
 
   <!-- 題目 -->
@@ -181,7 +218,7 @@
   <!-- 結果 -->
   <section id="screen-result" class="screen">
     <div class="card result-head">
-      <div class="pre">你的街貓本命是…</div>
+      <div class="pre" id="r-pre">你的街貓本命是…</div>
       <div id="r-art"></div>
       <div class="name" id="r-name"></div>
       <div class="breed" id="r-breed"></div>
@@ -197,6 +234,7 @@
     <div class="card">
       <div class="section-title">💛 你可以這樣守護牠</div>
       <ul class="care" id="r-care"></ul>
+      <p class="region-tip" id="r-region"></p>
     </div>
 
     <div class="card">
@@ -214,31 +252,30 @@
         <div class="yes">
           <h3>✓ 這樣做才對</h3>
           <ul>
-            <li><b>支持 TNVR</b>：從源頭減少街貓數量，是最人道的方式。</li>
+            <li><b>支持 TNVA/R</b>：從源頭減少街貓數量，是最人道的方式。</li>
             <li>發現受傷、生病或未剪耳的貓，<b>聯繫在地動保團體或動保處</b>。</li>
             <li>想養貓，<b>以領養代替購買</b>，並完成絕育與晶片登記。</li>
-            <li>和社區鄰居溝通，一起維護環境整潔。</li>
           </ul>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="section-title">✂️ 什麼是 TNVR？</div>
+      <div class="section-title">✂️ 什麼是 TNVA/R？</div>
       <div class="tnvr">
         <div><b>T</b><span class="zh">誘捕</span><small>Trap<br>用誘捕籠安全捕捉</small></div>
         <div><b>N</b><span class="zh">絕育</span><small>Neuter<br>由獸醫進行結紮</small></div>
         <div><b>V</b><span class="zh">疫苗</span><small>Vaccinate<br>施打狂犬病等疫苗</small></div>
-        <div><b>R</b><span class="zh">回置</span><small>Return<br>放回原本的地盤</small></div>
+        <div><b>A/R</b><span class="zh">送養／回置</span><small>Adopt / Return<br>親人貓送養，其餘放回原地盤</small></div>
       </div>
-      <p>一隻母貓一年可以生 2～3 胎、每胎 4～6 隻，若不絕育，數量會快速增加。TNVR 讓街貓不再繁殖，減少發情叫聲、打架與疾病傳播，貓群數量會隨時間自然減少，也讓社區更安寧。</p>
+      <p>一隻母貓一年可以生 2～3 胎、每胎 4～6 隻，若不絕育，數量會快速增加。TNVA/R 讓街貓不再繁殖，減少發情叫聲、打架與疾病傳播，貓群數量會隨時間自然減少，也讓社區更安寧。</p>
       <div class="ear">
         <div id="ear-art"></div>
         <p style="margin:0"><b>看到耳朵尖端被剪平一小角的貓？</b><br>那是「剪耳」記號，代表牠已經完成絕育，是社區的一份子，請友善對待、不需要再抓去結紮喔！</p>
       </div>
       <details>
         <summary>為什麼「不餵食」也是一種愛？</summary>
-        <p>隨意餵食看似善意，卻讓貓群越聚越多、在固定地點繁殖，食物殘渣孳生病媒、引來抱怨，貓咪反而可能遭到驅趕甚至傷害。真正幫助牠們的方法，是讓牠們不再繁殖（TNVR），並交由有規劃的團體進行管理。</p>
+        <p>隨意餵食看似善意，卻讓貓群越聚越多、在固定地點繁殖，食物殘渣孳生病媒、引來抱怨，貓咪反而可能遭到驅趕甚至傷害。真正幫助牠們的方法，是讓牠們不再繁殖（TNVA/R），並交由有規劃的團體進行管理。</p>
       </details>
       <details>
         <summary>在路邊看到小奶貓怎麼辦？</summary>
@@ -254,7 +291,7 @@
       <div class="section-title">🐾 成為貓掌守護者</div>
       <p class="muted" style="margin-bottom:4px">勾選全部，完成你的守護宣言：</p>
       <label><input type="checkbox"> 我不隨意餵食街貓</label>
-      <label><input type="checkbox"> 我支持 TNVR，看到需要幫助的貓會通報</label>
+      <label><input type="checkbox"> 我支持 TNVA/R，看到需要幫助的貓會通報</label>
       <label><input type="checkbox"> 我以領養代替購買，絕不棄養</label>
       <label><input type="checkbox"> 我會把正確觀念分享給身邊的人</label>
       <div class="pledge-done" id="pledge-done">🎉 歡迎加入貓掌守護者！請向攤位夥伴領取小禮物</div>
@@ -271,12 +308,20 @@
       <p class="muted" id="stats-total"></p>
       <div id="stats-list"></div>
     </div>
+    <div class="card">
+      <h3>📍 居住地區</h3>
+      <div id="stats-region"></div>
+    </div>
+    <div class="card">
+      <h3>📝 最近的參加者</h3>
+      <div class="table-wrap" id="stats-records"></div>
+    </div>
     <button class="btn" id="btn-stats-back">回到首頁</button>
     <button class="btn ghost" id="btn-stats-reset">清除統計</button>
   </section>
 
   <div class="footer">
-    <span data-org></span> ｜ 推廣 TNVR・友善街貓
+    <span data-org></span> ｜ 推廣 TNVA/R・友善街貓
     <br><button id="btn-stats">攤位統計</button>
   </div>
 </main>
@@ -337,7 +382,7 @@ const TYPES = {
     desc: "你天生自帶主角光環，走到哪都是焦點，朋友有事第一個想到你。你重視自己的地盤，也願意為夥伴挺身而出，是大家心中可靠的老大！",
     street: "未絕育的公貓為了爭地盤、搶母貓，常常打架受傷，傷口容易感染，也會透過咬傷傳染貓愛滋（FIV）等疾病；發情時的嚎叫與噴尿標記，更是社區抱怨的主因。",
     care: [
-      ["✂️", "<b>協助 TNVR</b>：絕育後的公貓打架、噴尿、嚎叫都會明顯減少，壽命也更長。"],
+      ["✂️", "<b>協助 TNVA/R</b>：絕育後的公貓打架、噴尿、嚎叫都會明顯減少，壽命也更長。"],
       ["🚫", "<b>不要餵食</b>：食物點會吸引更多公貓前來爭地盤，打架只會更多。"],
       ["📞", "看到受傷的貓，拍照記錄位置，<b>聯繫動保團體</b>，不要徒手抓牠以免被咬傷。"],
     ],
@@ -351,7 +396,7 @@ const TYPES = {
     street: "怕人的街貓多半是在街頭出生、從小沒跟人接觸的「野化貓」，很難被收養成家貓。黑貓在夜裡也特別容易發生車禍，甚至因迷信而被不友善對待。",
     care: [
       ["🙏", "<b>尊重距離</b>：不要追、不要強抱，牠最需要的是不被打擾。"],
-      ["✂️", "怕人的貓更需要<b>由專業團體用誘捕籠進行 TNVR</b>，請勿自行徒手捕捉。"],
+      ["✂️", "怕人的貓更需要<b>由專業團體用誘捕籠進行 TNVA/R</b>，請勿自行徒手捕捉。"],
       ["🚫", "<b>不要用食物引誘</b>牠靠近人群或馬路，反而增加危險。"],
       ["🖤", "破除「黑貓不吉利」的迷思，黑貓也是值得被善待的生命！"],
     ],
@@ -376,12 +421,11 @@ const TYPES = {
     look: { fur: "#9b9a98", stripe: "#5f5d5b", eye: "#7cc35b", tip: true },
     traits: ["正義感", "負責", "守護家園"],
     desc: "你對熟悉的人事物有強烈的歸屬感，正義感十足，總是默默守護著大家。有你在，大家就覺得安心！",
-    street: "耳朵尖端被剪平一角的貓，代表牠已經完成 TNVR 回到原本的社區。絕育後的街貓不再繁殖、比較不打架叫春，能穩定地守住地盤，也減少外來未絕育貓進入。",
+    street: "耳朵尖端被剪平一角的貓，代表牠已經完成 TNVA/R 回到原本的社區。絕育後的街貓不再繁殖、比較不打架叫春，能穩定地守住地盤，也減少外來未絕育貓進入。",
     care: [
       ["👀", "看到<b>剪耳貓</b>請友善對待，牠已經絕育，不需要再抓去結紮。"],
       ["🚫", "<b>不要隨意餵食</b>，避免吸引外來貓群聚集，破壞社區的平衡。"],
-      ["🧹", "和鄰居溝通 TNVR 的好處，<b>一起維護環境整潔</b>，讓人貓和平共存。"],
-      ["📞", "發現新出現、沒剪耳的貓，<b>通報在地動保團體</b>安排 TNVR。"],
+      ["📞", "發現新出現、沒剪耳的貓，<b>通報在地動保團體</b>安排 TNVA/R。"],
     ],
   },
   mom: {
@@ -392,7 +436,7 @@ const TYPES = {
     desc: "你是朋友圈的守護者，總是把別人的需要放在前面。溫柔卻堅強，遇到困難也會咬牙撐住，身邊的人都很依賴你。",
     street: "一隻母貓一年可生 2～3 胎，每胎 4～6 隻，但街頭的幼貓存活率很低，許多小貓撐不過第一個月。不斷懷孕生產，也讓貓媽媽的身體越來越虛弱。",
     care: [
-      ["✂️", "<b>TNVR 是最好的保護</b>：讓貓媽媽不必一胎接一胎地生，從源頭減少小貓受苦。"],
+      ["✂️", "<b>TNVA/R 是最好的保護</b>：讓貓媽媽不必一胎接一胎地生，從源頭減少小貓受苦。"],
       ["🍼", "看到小奶貓<b>先別急著抱走</b>，貓媽媽可能就在附近覓食，保持距離觀察。"],
       ["📞", "幼貓若有危險或明顯受傷，<b>聯繫動保團體</b>協助，不要自行餵牛奶。"],
       ["🏠", "小貓適合送養，<b>領養代替購買</b>，給牠們一個家。"],
@@ -407,7 +451,7 @@ const TYPES = {
     street: "到處遊蕩的街貓，最大的威脅是車禍，也容易誤食老鼠藥或被困在車底、機車引擎室裡。年輕未絕育的貓移動範圍大，也可能把貓群帶到新的地方繁殖。",
     care: [
       ["🚗", "冬天發動汽機車前，<b>先拍拍引擎蓋</b>，讓躲在裡面取暖的貓離開。"],
-      ["✂️", "<b>協助 TNVR</b>：絕育後的貓遊蕩範圍會縮小，減少車禍與迷路機率。"],
+      ["✂️", "<b>協助 TNVA/R</b>：絕育後的貓遊蕩範圍會縮小，減少車禍與迷路機率。"],
       ["🚫", "<b>不要用食物引誘</b>牠到馬路邊或店家門口，避免意外與糾紛。"],
       ["⚠️", "避免在戶外放置老鼠藥、捕鼠黏板，以免街貓誤傷。"],
     ],
@@ -472,11 +516,16 @@ const QUESTIONS = [
   ]},
 ];
 
+/* ===== 居住地區選項 ===== */
+const REGIONS = ["基隆市", "臺北市", "新北市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "臺中市", "彰化縣", "南投縣", "雲林縣",
+  "嘉義市", "嘉義縣", "臺南市", "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "臺東縣", "澎湖縣", "金門縣", "連江縣", "海外／其他"];
+
 /* ===== 狀態與流程 ===== */
 const $ = (s) => document.querySelector(s);
 let current = 0;
 let answers = [];
 let idleTimer = null;
+let profile = { nick: "", region: "" };
 
 document.querySelectorAll("[data-org]").forEach((el) => (el.textContent = CONFIG.orgName));
 $("#hero-cats").innerHTML = ["boss", "shy", "sweet", "guard"].map((k) => catSVG(TYPES[k].look)).join("");
@@ -487,6 +536,29 @@ function show(name) {
   $("#screen-" + name).classList.add("active");
   window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
 }
+
+$("#f-region").insertAdjacentHTML("beforeend", REGIONS.map((r) => `<option value="${r}">${r}</option>`).join(""));
+
+function goProfile() {
+  $("#profile-form").reset();
+  $("#f-error").hidden = true;
+  show("profile");
+}
+
+$("#profile-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const nick = $("#f-nick").value.trim();
+  const region = $("#f-region").value;
+  const err = !nick ? "請輸入你的綽號" : !region ? "請選擇居住地區" : "";
+  $("#f-error").textContent = err;
+  $("#f-error").hidden = !err;
+  if (err) return;
+  $("#f-nick").blur();
+  profile = { nick, region };
+  start();
+});
+
+["input", "change"].forEach((ev) => $("#profile-form").addEventListener(ev, () => ($("#f-error").hidden = true)));
 
 function start() {
   current = 0;
@@ -544,6 +616,10 @@ function calculate() {
 
 function showResult(key) {
   const t = TYPES[key];
+  $("#r-pre").textContent = `${profile.nick}，你的街貓本命是…`;
+  $("#r-region").textContent = profile.region && profile.region !== "海外／其他"
+    ? `📍 在${profile.region}發現受傷、生病或還沒剪耳的貓，請聯繫${profile.region}的動物保護單位或在地動保團體協助。`
+    : "";
   $("#r-art").innerHTML = catSVG(t.look);
   $("#r-name").textContent = t.name;
   $("#r-breed").textContent = t.breed;
@@ -567,24 +643,44 @@ document.querySelectorAll(".pledge input").forEach((c) =>
 );
 
 /* ===== 攤位統計（存在本機瀏覽器） ===== */
-const STAT_KEY = "catquiz-stats";
-function loadStats() {
-  try { return JSON.parse(localStorage.getItem(STAT_KEY)) || {}; } catch { return {}; }
+const STAT_KEY = "catquiz-records";
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem(STAT_KEY)) || []; } catch { return []; }
 }
 function recordStat(key) {
-  const s = loadStats();
-  s[key] = (s[key] || 0) + 1;
-  try { localStorage.setItem(STAT_KEY, JSON.stringify(s)); } catch {}
+  const list = loadRecords();
+  list.push({ nick: profile.nick, region: profile.region, type: key, time: Date.now() });
+  try { localStorage.setItem(STAT_KEY, JSON.stringify(list)); } catch {}
+}
+function esc(t) {
+  return String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function barRow(label, n, total, art = "") {
+  const pct = total ? (n / total) * 100 : 0;
+  return `<div class="stats-row"${art ? "" : ' style="grid-template-columns:1fr 40px"'}>${art}<div><div>${label}</div><div class="bar"><div style="width:${pct}%"></div></div></div><b>${n}</b></div>`;
 }
 function renderStats() {
-  const s = loadStats();
-  const total = Object.values(s).reduce((a, b) => a + b, 0);
+  const list = loadRecords();
+  const total = list.length;
+  const byType = {}, byRegion = {};
+  list.forEach((r) => {
+    byType[r.type] = (byType[r.type] || 0) + 1;
+    byRegion[r.region] = (byRegion[r.region] || 0) + 1;
+  });
   $("#stats-total").textContent = `共 ${total} 人完成測驗`;
-  $("#stats-list").innerHTML = Object.keys(TYPES).map((k) => {
-    const n = s[k] || 0;
-    const pct = total ? (n / total) * 100 : 0;
-    return `<div class="stats-row">${catSVG(TYPES[k].look)}<div><div>${TYPES[k].name}</div><div class="bar"><div style="width:${pct}%"></div></div></div><b>${n}</b></div>`;
-  }).join("");
+  $("#stats-list").innerHTML = Object.keys(TYPES).map((k) => barRow(TYPES[k].name, byType[k] || 0, total, catSVG(TYPES[k].look))).join("");
+  const regions = Object.keys(byRegion).sort((a, b) => byRegion[b] - byRegion[a]);
+  $("#stats-region").innerHTML = regions.length
+    ? regions.map((r) => barRow(esc(r), byRegion[r], total)).join("")
+    : '<p class="muted">還沒有資料</p>';
+  const recent = list.slice(-30).reverse();
+  $("#stats-records").innerHTML = recent.length
+    ? `<table class="records"><thead><tr><th>時間</th><th>綽號</th><th>地區</th><th>結果</th></tr></thead><tbody>${recent.map((r) => {
+        const d = new Date(r.time);
+        const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        return `<tr><td>${hm}</td><td>${esc(r.nick)}</td><td>${esc(r.region)}</td><td>${TYPES[r.type] ? TYPES[r.type].name : ""}</td></tr>`;
+      }).join("")}</tbody></table>`
+    : '<p class="muted">還沒有資料</p>';
   show("stats");
 }
 
@@ -601,13 +697,14 @@ function armIdle() {
 );
 
 /* ===== 按鈕 ===== */
-$("#btn-start").addEventListener("click", start);
+$("#btn-start").addEventListener("click", goProfile);
+$("#btn-profile-back").addEventListener("click", () => show("home"));
 $("#btn-back").addEventListener("click", () => { if (current > 0) { current--; renderQuestion(); } });
 $("#btn-again").addEventListener("click", () => { clearTimeout(idleTimer); show("home"); });
 $("#btn-share").addEventListener("click", async (e) => {
   const btn = e.currentTarget;
   const url = CONFIG.shareUrl || location.href;
-  const data = { title: "你是哪種街貓？", text: `來測測你是哪種街貓，一起認識 TNVR、守護流浪貓！（${CONFIG.orgName}）`, url };
+  const data = { title: "你是哪種街貓？", text: `來測測你是哪種街貓，一起認識 TNVA/R、守護流浪貓！（${CONFIG.orgName}）`, url };
   const flash = (msg) => { btn.textContent = msg; setTimeout(() => (btn.textContent = "分享這個測驗"), 2500); };
   try { if (navigator.share) { await navigator.share(data); return; } } catch (err) { if (err && err.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(url); flash("已複製連結！"); } catch { flash(url); }
