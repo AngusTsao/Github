@@ -62,8 +62,15 @@
 
 題目都在 `cat-quiz/index.html` 的 `STEPS` 陣列，守護者類型在 `TYPES`，承諾選項在 `PLEDGES`。
 
-> 留言牆、統計分析與 CSV 匯出需要共享資料庫，只在 claude.ai 版本中提供；
-> GitHub Pages 版本是純網頁，這些功能會自動隱藏，遊戲本身完整可玩。
+### 留言牆與統計分析
+
+資料存在你自己的 Google 試算表（透過 Google Apps Script），設定步驟見 [`cat-quiz/SETUP.md`](cat-quiz/SETUP.md)。
+設定好後：
+
+- 留言牆（展場螢幕）：https://angustsao.github.io/Github/cat-quiz/#wall
+- 統計分析（需要密碼）：https://angustsao.github.io/Github/cat-quiz/#stats
+
+還沒設定時（`cat-quiz/config.js` 的 `sheetApi` 是空的），測驗照樣可以玩，只是不記錄資料。
 
 
 ---
