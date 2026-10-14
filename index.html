@@ -189,14 +189,14 @@
       <h2>先認識一下你 🐾</h2>
       <p class="muted">填好後就開始測驗囉！</p>
       <div class="field">
-        <label for="f-nick">你的綽號</label>
-        <input id="f-nick" name="nick" type="text" maxlength="12" autocomplete="off" placeholder="例如：小橘">
-      </div>
-      <div class="field">
         <label for="f-age">年齡</label>
         <select id="f-age" name="age">
           <option value="">請選擇年齡</option>
         </select>
+      </div>
+      <div class="field">
+        <label for="f-nick">你的綽號</label>
+        <input id="f-nick" name="nick" type="text" maxlength="12" autocomplete="off" placeholder="例如：小橘">
       </div>
       <div class="field">
         <label for="f-region">居住地區</label>
@@ -564,7 +564,7 @@ $("#profile-form").addEventListener("submit", (e) => {
   const nick = $("#f-nick").value.trim();
   const age = $("#f-age").value;
   const region = $("#f-region").value;
-  const err = !nick ? "請輸入你的綽號" : !age ? "請選擇年齡" : !region ? "請選擇居住地區" : "";
+  const err = !age ? "請選擇年齡" : !nick ? "請輸入你的綽號" : !region ? "請選擇居住地區" : "";
   $("#f-error").textContent = err;
   $("#f-error").hidden = !err;
   if (err) return;
@@ -694,10 +694,10 @@ function renderStats() {
     : '<p class="muted">還沒有資料</p>';
   const recent = list.slice(-30).reverse();
   $("#stats-records").innerHTML = recent.length
-    ? `<table class="records"><thead><tr><th>時間</th><th>綽號</th><th>年齡</th><th>地區</th><th>結果</th></tr></thead><tbody>${recent.map((r) => {
+    ? `<table class="records"><thead><tr><th>時間</th><th>年齡</th><th>綽號</th><th>地區</th><th>結果</th></tr></thead><tbody>${recent.map((r) => {
         const d = new Date(r.time);
         const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-        return `<tr><td>${hm}</td><td>${esc(r.nick)}</td><td>${esc(r.age || "")}</td><td>${esc(r.region)}</td><td>${TYPES[r.type] ? TYPES[r.type].name : ""}</td></tr>`;
+        return `<tr><td>${hm}</td><td>${esc(r.age || "")}</td><td>${esc(r.nick)}</td><td>${esc(r.region)}</td><td>${TYPES[r.type] ? TYPES[r.type].name : ""}</td></tr>`;
       }).join("")}</tbody></table>`
     : '<p class="muted">還沒有資料</p>';
   show("stats");
