@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>假如你是一隻流浪貓</title>
+<meta name="description" content="一個像心理測驗的小遊戲：扮演一隻流浪貓，認識牠們在街頭會遇到的危險，以及怎麼餵食才是真的幫忙。">
+<meta name="theme-color" content="#fffaf3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#2a2420" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="流浪貓">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #f6efe6;
+    --card: #fffaf3;
+    --ink: #3b2f2a;
+    --muted: #7a6a60;
+    --line: #e6d8c8;
+    --accent: #d9783c;
+    --accent-ink: #ffffff;
+    --accent-soft: #fbe3d1;
+    --good: #4f9a6a;
+    --bad: #c4553f;
+    --fact: #eef3f8;
+    --fact-ink: #2f4a63;
+    --shadow: 0 6px 24px rgba(80, 50, 30, .10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1f1a17;
+      --card: #2a2420;
+      --ink: #f1e7dc;
+      --muted: #b6a597;
+      --line: #43382f;
+      --accent: #e8915a;
+      --accent-ink: #1f1a17;
+      --accent-soft: #4a3326;
+      --good: #7cc495;
+      --bad: #ee8a75;
+      --fact: #24303b;
+      --fact-ink: #c9dcee;
+      --shadow: 0 6px 24px rgba(0, 0, 0, .35);
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+    line-height: 1.75;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+  button { font: inherit; touch-action: manipulation; }
+
+  /* ---------- App shell ---------- */
+  .app {
+    display: flex; flex-direction: column;
+    height: 100vh; height: 100dvh;
+    max-width: 480px; margin: 0 auto;
+    background: var(--card);
+  }
+  @media (min-width: 520px) {
+    body { padding: 24px 0; }
+    .app { height: calc(100dvh - 48px); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; box-shadow: var(--shadow); }
+  }
+  .topbar {
+    flex: none; position: relative;
+    padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
+    display: flex; align-items: center; gap: 8px; min-height: 52px;
+    border-bottom: 1px solid var(--line); background: var(--card);
+  }
+  .topbar .title { flex: 1; font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon-btn {
+    flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer;
+    background: transparent; color: var(--ink); font-size: 1.1rem; display: grid; place-items: center;
+  }
+  .icon-btn:active { background: var(--accent-soft); }
+  .icon-btn[hidden] { display: none; }
+  .chips { display: flex; gap: 6px; flex: none; }
+  .chip { font-size: .8rem; background: var(--bg); border-radius: 999px; padding: 2px 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .progress-line { position: absolute; left: 0; bottom: -1px; height: 3px; background: var(--accent); transition: width .4s ease; }
+
+  .screen {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding: 24px 20px 28px;
+  }
+  .screen > .page { animation: slide .3s ease; }
+  @keyframes slide { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+
+  .actions {
+    flex: none; display: grid; gap: 10px;
+    padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px);
+    border-top: 1px solid var(--line); background: var(--card);
+  }
+  .actions:empty { display: none; }
+  .actions.row { grid-template-columns: 1fr 1fr; }
+
+  /* ---------- Content ---------- */
+  h1 { font-size: 1.6rem; margin: 0 0 .25em; line-height: 1.35; }
+  h2 { font-size: 1.25rem; margin: 0 0 .6em; line-height: 1.4; }
+  p { margin: 0 0 1em; }
+  .muted { color: var(--muted); font-size: .92rem; }
+  .center { text-align: center; }
+  .art { font-size: 3.4rem; text-align: center; line-height: 1.2; margin: 8px 0 14px; }
+  .hero-icon { display: block; width: 96px; height: 96px; margin: 8px auto 16px; border-radius: 24px; box-shadow: var(--shadow); }
+  .tag {
+    display: inline-block; font-size: .8rem; color: var(--accent);
+    background: var(--accent-soft); border-radius: 999px; padding: 2px 12px; margin-bottom: 6px;
+  }
+
+  label { display: block; font-weight: 600; margin: 16px 0 6px; }
+  input, select {
+    width: 100%; font: inherit; font-size: 16px; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; appearance: none;
+  }
+  select {
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%;
+    background-size: 6px 6px; background-repeat: no-repeat;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .err { color: var(--bad); font-size: .88rem; min-height: 1.4em; margin-top: 10px; }
+
+  .btn {
+    display: block; width: 100%; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 14px;
+    padding: 14px 16px; min-height: 50px;
+    transition: transform .1s;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .btn.small { min-height: 0; padding: 8px 14px; width: auto; display: inline-block; font-size: .9rem; }
+
+  .choices { display: grid; gap: 10px; margin-top: 18px; }
+  .choice {
+    text-align: left; cursor: pointer; color: var(--ink); line-height: 1.6;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+    display: flex; gap: 10px; align-items: flex-start;
+    transition: border-color .15s, transform .1s, background .15s;
+  }
+  .choice:hover, .choice:focus-visible { border-color: var(--accent); outline: none; }
+  .choice:active { transform: scale(.98); background: var(--accent-soft); }
+  .choice b {
+    flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent); color: var(--accent-ink); font-size: .85rem; margin-top: 1px;
+  }
+  .hint { text-align: center; font-size: .82rem; color: var(--muted); margin-top: 16px; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .stat { font-size: .85rem; color: var(--muted); }
+  .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 4px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .5s ease; }
+  .bar.hp > i { background: var(--good); }
+
+  .delta { font-size: .95rem; margin: -4px 0 14px; }
+  .delta span { margin-right: 12px; font-weight: 600; }
+  .up { color: var(--good); } .down { color: var(--bad); }
+
+  .fact {
+    background: var(--fact); color: var(--fact-ink); border-radius: 16px;
+    padding: 14px 16px; margin-top: 8px; font-size: .95rem;
+  }
+  .fact strong { display: block; margin-bottom: 4px; }
+  .fact p:last-child { margin-bottom: 0; }
+
+  .result-title { font-size: 1.6rem; color: var(--accent); margin: 4px 0 8px; }
+  .section { margin-top: 24px; padding-top: 18px; border-top: 1px dashed var(--line); }
+  .section h3 { font-size: 1.05rem; margin: 0 0 8px; }
+  ul { padding-left: 1.2em; margin: 0; }
+  li { margin-bottom: 6px; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; }
+  .compare div { background: var(--bg); border-radius: 14px; padding: 12px 8px; font-size: .9rem; }
+  .compare .num { font-size: 1.3rem; font-weight: 700; color: var(--accent); display: block; }
+
+  .resume {
+    display: flex; align-items: center; gap: 12px; background: var(--accent-soft);
+    border-radius: 16px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .resume span { flex: 1; font-size: .92rem; }
+  .install { text-align: center; margin-top: 18px; }
+  .install[hidden] { display: none; }
+  .note { font-size: .78rem; color: var(--muted); text-align: center; margin-top: 24px; }
+
+  /* 對話框 */
+  .sheet-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: end center;
+    z-index: 10; animation: fade .2s ease;
+  }
+  .sheet {
+    width: 100%; max-width: 480px; background: var(--card); border-radius: 22px 22px 0 0;
+    padding: 22px 20px calc(env(safe-area-inset-bottom) + 18px); animation: up .25s ease;
+  }
+  .sheet .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes up { from { transform: translateY(100%); } }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 96px); transform: translateX(-50%);
+    background: var(--ink); color: var(--card); padding: 8px 16px; border-radius: 999px; font-size: .88rem;
+    z-index: 20; animation: fade .2s ease;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <button class="icon-btn" id="homeBtn" aria-label="回到首頁" hidden>⌂</button>
+    <div class="title" id="title">假如你是一隻流浪貓</div>
+    <div class="chips" id="chips"></div>
+    <div class="progress-line" id="progress" style="width:0"></div>
+  </header>
+  <main class="screen" id="screen"></main>
+  <nav class="actions" id="actions"></nav>
+</div>
+
+<script>
+const REGIONS = [
+  "臺北市", "新北市", "基隆市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "臺中市",
+  "彰化縣", "南投縣", "雲林縣", "嘉義市", "嘉義縣", "臺南市", "高雄市", "屏東縣",
+  "宜蘭縣", "花蓮縣", "臺東縣", "澎湖縣", "金門縣", "連江縣", "其他／海外"
+];
+
+// 個性：brave 冒險、careful 謹慎、social 親人、solo 獨立
+const SCENES = [
+  {
+    art: "📦🐱", tag: "第 1 天・身世",
+    text: "假如你是一隻流浪貓……你醒來的時候，身邊是一個濕掉的紙箱。你還記得自己是怎麼來到{region}這條巷子的嗎？",
+    choices: [
+      {
+        text: "記得。我原本有個家，有一天主人把我放在這裡就開車走了。",
+        fx: { hp: -5, food: 0, social: 2 },
+        result: "你一直坐在原地等，以為主人會回來。但天黑了，車子一台台經過，沒有一台停下來。家貓從小被照顧，不太會自己找食物，也不懂得躲避危險——被棄養的貓，往往是街上最脆弱的一群。",
+        fact: { title: "棄養是違法的", body: "依《動物保護法》，飼主不得棄養動物，違者可處新台幣 3 萬至 15 萬元罰鍰。不能繼續養的話，應該自己尋找新的認養人，或向當地動物保護機關諮詢，而不是丟到街上。" }
+      },
+      {
+        text: "不記得。我一出生就在街上，媽媽也是流浪貓。",
+        fx: { hp: 0, food: 0, solo: 2 },
+        result: "你的媽媽在機車停車場底下生下你們一窩五隻小貓。你是少數長大的那一隻——你的兄弟姊妹，有的生病，有的在雨夜裡沒撐過去。",
+        fact: { title: "街頭的小貓很難長大", body: "在戶外出生的幼貓，因為失溫、飢餓、感染疾病和意外，能平安長大的比例並不高。每一隻沒結紮的母貓，都可能讓這樣的悲劇不斷重演。" }
+      }
+    ]
+  },
+  {
+    art: "🗑️🍗", tag: "第 3 天・找食物",
+    text: "肚子好餓。你聞到附近飄來各種味道，該去哪裡找吃的呢？",
+    choices: [
+      {
+        text: "翻便利商店後面的垃圾袋，裡面有吃剩的炸雞和便當。",
+        fx: { hp: -15, food: 25, brave: 2 },
+        result: "你吃得很飽，但半夜開始拉肚子，還被一根雞骨頭刮傷喉嚨。",
+        fact: { title: "人類的食物對貓不友善", body: "剩菜通常太鹹、太油，會增加貓咪腎臟負擔；洋蔥、大蒜、巧克力、葡萄對貓有毒；煮熟的雞骨容易碎裂刺傷腸胃。垃圾裡還有腐壞的食物和塑膠袋，都可能讓牠們生病。" }
+      },
+      {
+        text: "躲在草叢裡，抓路過的小鳥和蜥蜴。",
+        fx: { hp: -5, food: 15, solo: 2 },
+        result: "你是天生的獵人，終於抓到一隻麻雀。可是你也發現，附近公園的鳥越來越少了。",
+        fact: { title: "貓也會影響野生動物", body: "家貓被國際自然保護聯盟（IUCN）列入「世界百大入侵種」。數量龐大的戶外貓會大量捕食鳥類、爬蟲類和小型哺乳類。控制流浪貓數量，也是在保護生態。" }
+      },
+      {
+        text: "去公園長椅旁，那邊常有人留下一碗飼料。",
+        fx: { hp: 0, food: 20, social: 2 },
+        result: "碗裡有飼料，但已經被太陽曬了一整天，旁邊還有螞蟻和蟑螂。你餓到還是吃了。",
+        fact: { title: "放了就走的飼料", body: "飼料長時間放在戶外會受潮、發霉、招來蟑螂和老鼠，也可能讓鄰居對貓咪更反感。等一下我們會再聊聊「怎麼餵才是真的幫忙」。" }
+      }
+    ]
+  },
+  {
+    art: "🚗💨", tag: "第 5 天・過馬路",
+    text: "你想到對面的公園去，但中間隔著一條車很多的大馬路。車燈好亮，喇叭聲好吵。",
+    choices: [
+      {
+        text: "看準一個空隙，一口氣衝過去！",
+        fx: { hp: -25, food: -5, brave: 3 },
+        result: "一台機車突然切出來，你被擦撞到後腿，一拐一拐地躲進水溝裡。沒有人知道你受傷了。",
+        fact: { title: "車禍是流浪動物最常見的死因之一", body: "貓遇到強光時常會愣住不動，晚上更容易被撞。許多受傷的流浪貓躲起來後，就再也沒能出來。開車騎車時放慢速度、注意路邊，就能救下一條命。" }
+      },
+      {
+        text: "等到深夜車少一點再過去。",
+        fx: { hp: -5, food: -10, careful: 3 },
+        result: "你平安過了馬路，但等了好幾個小時，肚子更餓了。在街上，「安全」常常要用「挨餓」來換。",
+        fact: { title: "流浪貓的生活充滿取捨", body: "牠們每天都在「吃飽」和「安全」之間做選擇。這也是為什麼流浪貓的健康狀況和壽命，通常遠不如在室內生活的家貓。" }
+      },
+      {
+        text: "算了，先鑽進路邊停著的車子底下，那裡好溫暖。",
+        fx: { hp: -10, food: -5, careful: 1, solo: 1 },
+        result: "你爬進還熱熱的引擎室睡著了。突然引擎發動——你嚇得拚命往外竄，差點被皮帶捲進去。",
+        fact: { title: "上車前，先拍拍引擎蓋", body: "天冷時貓咪很喜歡躲進引擎室或輪胎旁取暖。發動車子前，先拍拍引擎蓋、跺跺腳、看一下車底，讓躲在裡面的貓有機會逃出來。" }
+      }
+    ]
+  },
+  {
+    art: "🥣👵", tag: "第 8 天・愛心餵食",
+    text: "巷口有位阿姨，每天晚上都會倒一大盤飼料在騎樓角落，然後就離開了。很多貓都會來吃。",
+    choices: [
+      {
+        text: "太好了！每天準時去吃，還帶朋友一起來。",
+        fx: { hp: -5, food: 20, social: 3 },
+        result: "貓越聚越多，大家開始打架搶食物；吃剩的飼料引來老鼠和蟑螂。有天你聽到住戶在罵：「這些貓好髒，要想辦法趕走！」隔天，騎樓角落多了一碗你沒看過的食物……",
+        fact: { title: "愛心餵食，可能讓貓更危險", body: "只放不收的餵食，會讓貓群越聚越大、繁殖越多，也讓環境髒亂、引發鄰居衝突，甚至有人因此放毒餌或驅趕。另外，餵食後留下食物和垃圾，也可能違反環境清潔相關規定被開罰。" }
+      },
+      {
+        text: "只在阿姨在場的時候去吃，吃完她會把碗收走。",
+        fx: { hp: 5, food: 15, careful: 2, social: 1 },
+        result: "後來阿姨學到了正確的方法：固定時間、固定地點、適當份量，貓吃完就把碗和地面清乾淨。鄰居的抱怨變少了，大家對你們也友善了一點。",
+        fact: { title: "負責任的餵食：定時、定點、定量、不留食", body: "每天固定時間與地點、份量剛好，等貓吃完（約 30 分鐘內）就收拾乾淨，不留剩食。更重要的是要搭配「結紮」（TNR），否則餵得越好，生得越多，問題只會越來越大。" }
+      },
+      {
+        text: "不去湊熱鬧，自己去別的地方找吃的。",
+        fx: { hp: -5, food: -5, solo: 3 },
+        result: "你避開了貓群的爭吵，但也常常餓肚子。你漸漸瘦了下來。",
+        fact: { title: "餵或不餵，都不是最終解答", body: "餵食能暫時填飽肚子，卻沒辦法解決流浪貓「為什麼在街上」的問題。真正能讓街貓變少的，是源頭：飼主不棄養、家貓結紮、以「認養」代替購買。" }
+      }
+    ]
+  },
+  {
+    art: "🌸💕", tag: "第 30 天・春天來了",
+    text: "天氣變暖了，你的身體開始有奇怪的感覺，整晚都想往外跑、大聲叫。巷子裡的其他貓也一樣。",
+    choices: [
+      {
+        text: "順著本能，去找另一隻貓。",
+        fx: { hp: -15, food: -10, brave: 2 },
+        result: "兩個月後，一窩小貓在廢棄的機車底下出生了。為了餵飽牠們，你瘦得只剩皮包骨。",
+        fact: { title: "流浪貓繁殖得非常快", body: "母貓大約 4～6 個月大就可能懷孕，一年可以生 2～3 胎，每胎常有 4～6 隻。沒有結紮的話，幾年內一隻母貓的後代就可能多到數不清，而大部分小貓都要面對和你一樣艱難的生活。" }
+      },
+      {
+        text: "你聞到一個籠子裡有香香的罐頭，走進去後門關起來了！",
+        fx: { hp: 5, food: 10, careful: 1, social: 1 },
+        result: "你害怕極了。但醒來後，你在一個溫暖的房間裡，肚子有個小傷口，耳朵被剪了一個小角。幾天後，你被放回熟悉的巷子。",
+        fact: { title: "認識 TNR：誘捕、絕育、回置", body: "TNR（Trap-Neuter-Return）是以人道方式誘捕流浪貓、帶去結紮，再放回原本的地方。耳朵剪一個小角，是「已結紮」的記號。結紮能減少貓的數量，也能降低發情時的吵鬧、打架和疾病傳播。" }
+      }
+    ]
+  },
+  {
+    art: "😾⚔️", tag: "第 45 天・地盤之爭",
+    text: "一隻高大的公貓出現在你常睡覺的屋簷下，牠壓低身體，對你發出低吼。",
+    choices: [
+      {
+        text: "不能退讓！衝上去打一架。",
+        fx: { hp: -20, food: 0, brave: 3 },
+        result: "你贏了，但臉上被咬了好幾口。幾天後傷口腫起來、化膿，你開始發燒。",
+        fact: { title: "打架會傳染疾病", body: "貓免疫不全病毒（俗稱「貓愛滋」）主要透過打架咬傷傳染；咬傷也很容易化膿感染。街上的貓還可能感染貓瘟、皮膚病和寄生蟲，卻很少有機會被治療。" }
+      },
+      {
+        text: "默默離開，去找新的地方睡。",
+        fx: { hp: -5, food: -5, careful: 2, solo: 1 },
+        result: "你避開了衝突，但新的地方又濕又冷，每天晚上都睡不好。",
+        fact: { title: "流浪貓缺少的，是穩定的家", body: "在街上，安全的睡覺地點非常有限。貓的數量越多，搶地盤、打架和壓力就越大。這也是「減少數量」比「多餵一點」更重要的原因。" }
+      }
+    ]
+  },
+  {
+    art: "🌀🌧️", tag: "第 60 天・颱風夜",
+    text: "{region}發布了颱風警報。風好大，雨像用倒的，路上的人都躲回家了。",
+    choices: [
+      {
+        text: "躲進騎樓的紙箱堆裡。",
+        fx: { hp: -10, food: -10, careful: 1 },
+        result: "半夜紙箱被風吹跑、被雨泡爛，你全身濕透，冷得一直發抖。",
+        fact: { title: "極端天氣很致命", body: "颱風、寒流和夏天的高溫，對沒有遮蔽的動物都很危險。幼貓和老貓特別容易失溫或中暑。" }
+      },
+      {
+        text: "對著一戶亮著燈的人家喵喵叫。",
+        fx: { hp: 5, food: 10, social: 3 },
+        result: "一個人打開門，猶豫了一下，拿了條舊毛巾和一個紙箱讓你躲在門口。那一晚，你第一次覺得被保護。",
+        fact: { title: "颱風天可以怎麼幫", body: "可以在自家騎樓、陽台等不妨礙他人的地方，暫時放一個有遮蔽的紙箱或舊毛巾。看到受困或受傷的動物，可以聯絡當地動物保護單位協助。" }
+      },
+      {
+        text: "爬到排水溝裡躲起來。",
+        fx: { hp: -20, food: -5, solo: 2, brave: 1 },
+        result: "雨水暴漲，溝裡的水越來越高。你拚命往上爬，好不容易才逃出來。",
+        fact: { title: "看似安全的地方，其實很危險", body: "大雨時，排水溝、地下室和涵洞會快速積水。許多動物因為躲進這些地方而溺水。" }
+      }
+    ]
+  },
+  {
+    art: "🧒🤚", tag: "第 75 天・陌生人",
+    text: "一群放學的學生看到你，有人蹲下來想摸你，有人拿起手機拍照，還有一個人撿起了石頭。",
+    choices: [
+      {
+        text: "慢慢走過去，蹭蹭那個蹲下來的人。",
+        fx: { hp: -5, food: 5, social: 3 },
+        result: "那個學生很開心地摸你，但旁邊那個人把石頭丟了過來，正中你的背。你嚇得逃走了。",
+        fact: { title: "傷害動物是違法的", body: "依《動物保護法》，任何人都不得騷擾、虐待或傷害動物，嚴重的話會有刑事責任。看到有人虐待動物，請不要自己衝突，可以拍照或錄影存證，並通報警察或動物保護單位。" }
+      },
+      {
+        text: "躲到高處，遠遠地看著他們。",
+        fx: { hp: 0, food: 0, careful: 2, solo: 1 },
+        result: "你等他們離開才下來。在街上，對人保持警覺，常常是活下去的方法。",
+        fact: { title: "不是每隻貓都想被摸", body: "流浪貓大多怕人，強行抱起或追逐可能讓牠們受驚，也可能讓你被抓傷、咬傷。遇到街貓，保持距離、輕聲說話、讓牠自己決定要不要靠近。" }
+      }
+    ]
+  },
+  {
+    art: "🏠❓", tag: "第 90 天・一個機會",
+    text: "那位颱風夜幫過你的人又出現了。他手上拿著一個外出籠，蹲下來對你說：「要不要跟我回家？」",
+    choices: [
+      {
+        text: "猶豫了一下，還是走進了籠子。",
+        fx: { hp: 15, food: 15, social: 2, careful: 1 },
+        result: "你被帶去看獸醫、打預防針、做健康檢查。現在你每天睡在窗邊曬太陽，再也不用擔心下一餐在哪裡。",
+        fact: { title: "以認養代替購買", body: "收容所和中途之家有很多等待家的貓狗。認養前請想清楚：照顧一隻貓可能長達 15 年以上，需要時間、金錢和耐心。如果決定了，就請陪牠一輩子。" }
+      },
+      {
+        text: "轉身跑掉了，你習慣了自由。",
+        fx: { hp: -5, food: 0, solo: 3, brave: 1 },
+        result: "那個人沒有勉強你。之後他還是常常來看你，帶你去結紮、在你生病時帶你看醫生。你成了這條巷子裡的「社區貓」。",
+        fact: { title: "不能認養，也能幫忙", body: "有些街貓已經不適合被關在家裡。這時候，由社區居民一起負責結紮、管理餵食、注意健康狀況的「社區貓」模式，可以讓貓和人比較和平地生活在一起。" }
+      }
+    ]
+  }
+];
+
+const TYPES = {
+  brave: {
+    emoji: "🦁", name: "街頭冒險家",
+    desc: "你勇敢、行動力強，遇到事情總是先衝再說。在街頭，這份勇氣讓你搶得到食物，卻也讓你常常帶傷。",
+    real: "現實中，太勇敢的流浪貓最容易遇上車禍和打架受傷。牠們的勇敢，其實常常是因為沒得選擇。"
+  },
+  careful: {
+    emoji: "🦉", name: "巷弄智者",
+    desc: "你謹慎、有耐心，懂得觀察和等待。你知道在街上活下去，靠的不是力氣，而是判斷。",
+    real: "但就算再聰明，流浪貓還是躲不過颱風、疾病和挨餓。牠們的「謹慎」，是一次次受傷後學會的。"
+  },
+  social: {
+    emoji: "🐈", name: "撒嬌外交官",
+    desc: "你親人、愛撒嬌，總能找到願意幫你的人。你相信這世界上還是有溫柔的人。",
+    real: "親人的貓最有機會被認養，但也最容易被有心人傷害。很多親人的街貓，其實是曾經被棄養的家貓。"
+  },
+  solo: {
+    emoji: "🐆", name: "屋頂獨行俠",
+    desc: "你獨立、愛自由，不靠別人也能過日子。你習慣一個人看月亮，也習慣一個人療傷。",
+    real: "獨立的街貓生病或受傷時，往往沒有人發現。對牠們來說，社區居民默默的關注和協助結紮，就是最大的幫忙。"
+  }
+};
+
+const AGE_GROUPS = [
+  { label: "12 歲以下", tier: "kid" },
+  { label: "13～17 歲", tier: "teen" },
+  { label: "18～24 歲", tier: "adult" },
+  { label: "25～34 歲", tier: "adult" },
+  { label: "35～44 歲", tier: "adult" },
+  { label: "45～54 歲", tier: "adult" },
+  { label: "55～64 歲", tier: "adult" },
+  { label: "65 歲以上", tier: "adult" }
+];
+
+const SAVE_KEY = "straycat-save-v1";
+const freshState = () => ({ name: "", age: "", tier: "", region: "", hp: 70, food: 50, traits: { brave: 0, careful: 0, social: 0, solo: 0 }, i: 0 });
+let state = freshState();
+let installPrompt = null;
+
+const $ = id => document.getElementById(id);
+const screen = $("screen");
+const actions = $("actions");
+const clamp = v => Math.max(5, Math.min(100, v));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const regionText = () => state.region === "其他／海外" ? "城市" : state.region;
+const fill = s => s.replaceAll("{region}", esc(regionText())).replaceAll("{name}", esc(state.name));
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+// ---------- 存檔（瀏覽器不支援時就略過）----------
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (_) {} }
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (_) {} }
+function loadSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    return s && s.name && s.i < SCENES.length ? s : null;
+  } catch (_) { return null; }
+}
+
+// ---------- 畫面框架 ----------
+// opts: { title, game: 顯示關卡進度與數值, home: 顯示回首頁, actions: HTML, row: 按鈕並排 }
+function render(html, opts = {}) {
+  screen.innerHTML = `<div class="page">${html}</div>`;
+  screen.scrollTop = 0;
+  actions.innerHTML = opts.actions || "";
+  actions.classList.toggle("row", !!opts.row);
+  $("title").textContent = opts.title || "假如你是一隻流浪貓";
+  $("homeBtn").hidden = !opts.home;
+  $("chips").innerHTML = opts.game
+    ? `<span class="chip">❤️ ${state.hp}</span><span class="chip">🍚 ${state.food}</span>` : "";
+  $("progress").style.width = opts.game ? `${(state.i + (opts.done ? 1 : 0)) / SCENES.length * 100}%` : "0";
+}
+
+function confirmSheet(text, okText, onOk) {
+  const bg = document.createElement("div");
+  bg.className = "sheet-bg";
+  bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">
+      <p style="margin:0">${text}</p>
+      <div class="btns"><button class="btn ghost" data-a="no">取消</button><button class="btn" data-a="ok">${okText}</button></div>
+    </div>`;
+  bg.onclick = e => {
+    const a = e.target.dataset.a;
+    if (e.target === bg || a) bg.remove();
+    if (a === "ok") onOk();
+  };
+  document.body.appendChild(bg);
+}
+
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+$("homeBtn").onclick = () => {
+  if (state.name && state.i < SCENES.length) {
+    confirmSheet("要回到首頁嗎？目前的進度會保留，下次可以繼續。", "回首頁", showStart);
+  } else showStart();
+};
+
+// ---------- 首頁 ----------
+function showStart() {
+  const saved = loadSave();
+  render(`
+    <img class="hero-icon" src="icons/icon.svg" alt="">
+    <h1 class="center">假如你是一隻流浪貓</h1>
+    <p class="muted center">化身為一隻流浪貓，在街頭度過 90 天。<br>做出你的選擇，看看你是哪一種貓——<br>也看看牠們真實的處境。</p>
+    ${saved ? `
+      <div class="resume">
+        <span>🐾 ${esc(saved.name)}，你上次玩到第 ${saved.i + 1} 關</span>
+        <button class="btn small" id="resume">繼續</button>
+      </div>` : ""}
+    <form id="form" novalidate>
+      <label for="name">暱稱</label>
+      <input id="name" maxlength="12" placeholder="例如：小橘" autocomplete="off" enterkeyhint="next">
+      <label for="age">年齡</label>
+      <select id="age">
+        <option value="">請選擇</option>
+        ${AGE_GROUPS.map((g, k) => `<option value="${k}">${g.label}</option>`).join("")}
+      </select>
+      <label for="region">居住地區</label>
+      <select id="region">
+        <option value="">請選擇</option>
+        ${REGIONS.map(r => `<option>${r}</option>`).join("")}
+      </select>
+      <div class="err" id="err" role="alert"></div>
+    </form>
+    <div class="install" id="install" hidden>
+      <button class="btn small ghost" id="installBtn">📲 安裝到手機主畫面</button>
+    </div>
+    <p class="note">本遊戲內容為衛教用途，各地規定請以當地主管機關公告為準。</p>`,
+    { actions: `<button class="btn" type="submit" form="form">開始當一隻貓 🐈</button>` });
+
+  if (saved) $("resume").onclick = () => { state = saved; showScene(); };
+  updateInstall();
+
+  $("form").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("name").value.trim();
+    const ageGroup = AGE_GROUPS[$("age").value];
+    const region = $("region").value;
+    const err = $("err");
+    if (!name) return err.textContent = "請輸入暱稱";
+    if (!ageGroup) return err.textContent = "請選擇年齡區間";
+    if (!region) return err.textContent = "請選擇居住地區";
+    state = { ...freshState(), name, age: ageGroup.label, tier: ageGroup.tier, region };
+    showIntro();
+  });
+}
+
+function updateInstall() {
+  const box = $("install");
+  if (!box || isStandalone()) return;
+  if (installPrompt || isIOS()) box.hidden = false;
+  $("installBtn").onclick = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+      installPrompt = null;
+      box.hidden = true;
+    } else {
+      confirmSheet("在 Safari 點下方的「分享」按鈕 <b>⎋</b>，再選「<b>加入主畫面</b>」，就可以像 App 一樣打開遊戲。", "知道了", () => {});
+    }
+  };
+}
+
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  installPrompt = e;
+  updateInstall();
+});
+
+// ---------- 遊戲 ----------
+function showIntro() {
+  save();
+  render(`
+    <div class="art">🌙🐱</div>
+    <h2>${esc(state.name)}，閉上眼睛……</h2>
+    <p>想像你變成了一隻小小的貓。你的身上沒有項圈，沒有名字，也沒有家。</p>
+    <p>你的家，是${esc(regionText())}的一條巷子。</p>
+    <p class="muted">接下來，你會遇到各種狀況。請憑直覺選擇——沒有標準答案，但每個選擇都有後果。</p>`,
+    { home: true, actions: `<button class="btn" id="go">睜開眼睛</button>` });
+  $("go").onclick = showScene;
+}
+
+function showScene() {
+  const s = SCENES[state.i];
+  save();
+  render(`
+    <span class="tag">${s.tag}</span>
+    <div class="art">${s.art}</div>
+    <p>${fill(s.text)}</p>
+    <div class="choices">
+      ${s.choices.map((c, k) => `<button class="choice" data-k="${k}"><b>${"ABC"[k]}</b><span>${fill(c.text)}</span></button>`).join("")}
+    </div>
+    <p class="hint">點選一個選項</p>`,
+    { title: `第 ${state.i + 1} 關／共 ${SCENES.length} 關`, game: true, home: true });
+  screen.querySelectorAll(".choice").forEach(b => b.onclick = () => choose(+b.dataset.k));
+}
+
+function choose(k) {
+  const c = SCENES[state.i].choices[k];
+  const before = { hp: state.hp, food: state.food };
+  state.hp = clamp(state.hp + (c.fx.hp || 0));
+  state.food = clamp(state.food + (c.fx.food || 0));
+  for (const t of Object.keys(state.traits)) state.traits[t] += c.fx[t] || 0;
+  if (navigator.vibrate && state.hp < before.hp) navigator.vibrate(30);
+  const d = (label, a, b) => {
+    const diff = b - a;
+    if (!diff) return "";
+    return `<span class="${diff > 0 ? "up" : "down"}">${label} ${diff > 0 ? "+" : ""}${diff}</span>`;
+  };
+  const last = state.i === SCENES.length - 1;
+  render(`
+    <h2>結果</h2>
+    <div class="delta">${d("❤️ 體力", before.hp, state.hp)}${d("🍚 飽足", before.food, state.food)}</div>
+    <p>${fill(c.result)}</p>
+    <div class="fact"><strong>📖 ${c.fact.title}</strong><p>${c.fact.body}</p></div>`,
+    {
+      title: `第 ${state.i + 1} 關／共 ${SCENES.length} 關`, game: true, home: true, done: true,
+      actions: `<button class="btn" id="next">${last ? "看看我是哪一種貓 →" : "繼續 →"}</button>`
+    });
+  $("next").onclick = () => {
+    state.i++;
+    last ? showResult() : showScene();
+  };
+}
+
+function ageTips() {
+  if (state.tier === "kid") return [
+    "看到街上的貓，可以遠遠地看、輕聲打招呼，不要追牠或硬抱牠。",
+    "想要餵貓或帶貓回家，一定要先跟爸爸媽媽或老師討論。",
+    "看到有人欺負動物，不要自己上前，馬上告訴身邊的大人。",
+    "把今天學到的事，分享給家人和同學聽！"
+  ];
+  if (state.tier === "teen") return [
+    "看到街貓時保持距離，不要為了拍照或好玩去逗弄、追趕牠們。",
+    "想餵食的話，記得「定時、定點、定量、吃完收乾淨」，並和家人討論。",
+    "可以和同學一起參加動物保護團體的志工活動或校園宣導。",
+    "未來如果想養寵物，請以「認養代替購買」，而且要能照顧牠一輩子。"
+  ];
+  return [
+    "家裡的貓請結紮、植入晶片並登記，養在室內，不讓牠到處遊蕩。",
+    "想認養的話，可以從收容所或中途之家開始，認養前評估好時間與經濟能力。",
+    "若要餵食街貓，請負責任地餵：定時、定點、定量、不留食，並協助 TNR 結紮。",
+    "開車騎車放慢速度，天冷發車前拍拍引擎蓋。",
+    "可以支持在地 TNR 團體，或擔任志工、中途。"
+  ];
+}
+
+function showResult() {
+  clearSave();
+  const t = state.traits;
+  const top = Object.keys(t).reduce((a, b) => (t[b] > t[a] ? b : a));
+  const type = TYPES[top];
+  const ok = state.hp >= 50;
+  const region = state.region === "其他／海外" ? "當地" : esc(state.region);
+  render(`
+    <div class="art">${type.emoji}</div>
+    <p class="muted center" style="margin:0">${esc(state.name)}，你是——</p>
+    <h1 class="result-title center">${type.name}</h1>
+    <p>${type.desc}</p>
+    <div class="fact"><strong>🔎 真實的街貓</strong><p>${type.real}</p></div>
+
+    <div class="section">
+      <h3>你的 90 天</h3>
+      <div class="stats">
+        <div class="stat">❤️ 體力 ${state.hp}<div class="bar hp"><i style="width:${state.hp}%"></i></div></div>
+        <div class="stat">🍚 飽足 ${state.food}<div class="bar"><i style="width:${state.food}%"></i></div></div>
+      </div>
+      <p>${ok
+        ? "你撐過了這 90 天，運氣算是不錯。但對真實的流浪貓來說，90 天只是開始，牠們每天都要再賭一次。"
+        : "這 90 天，你受了不少傷、也餓了很多次。很遺憾，這就是許多流浪貓真實的日常——而且很多貓撐不到第 90 天。"}</p>
+    </div>
+
+    <div class="section">
+      <h3>街貓 vs. 家貓</h3>
+      <div class="compare">
+        <div><span class="num">約 2～5 年</span>流浪貓常見的估計壽命</div>
+        <div><span class="num">12～15 年+</span>室內家貓的平均壽命</div>
+      </div>
+      <p class="muted" style="margin-top:10px">數字依地區與研究而不同，但差距一直都很明顯。</p>
+    </div>
+
+    <div class="section">
+      <h3>所以，餵食到底好不好？</h3>
+      <ul>
+        <li><b>放了就走的餵食</b>：引來蟲鼠、環境髒亂、貓群聚集與繁殖，最後常常反而害了貓。</li>
+        <li><b>負責任的餵食</b>：定時、定點、定量、吃完收乾淨，並<b>搭配結紮（TNR）</b>，才是真的在幫忙。</li>
+        <li><b>最根本的方法</b>：不棄養、家貓結紮、以認養代替購買——讓街上不再有新的流浪貓。</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h3>${state.tier === "kid" ? "小朋友" : esc(state.name)}，你可以這樣做</h3>
+      <ul>${ageTips().map(x => `<li>${x}</li>`).join("")}</ul>
+    </div>
+
+    <div class="section">
+      <h3>📍 在${region}需要幫忙時</h3>
+      <ul>
+        <li>發現受傷、受困的動物，或看到虐待動物的行為：聯絡${region}的動物保護主管機關（各縣市動物保護處／所）。</li>
+        ${state.region === "其他／海外" ? "" : `<li>也可以撥打全國動物保護諮詢專線 <a href="tel:1959"><b>1959</b></a>。</li>`}
+        <li>想認養：可以到${region}的公立動物收容所，或洽詢在地的中途、動保團體。</li>
+      </ul>
+    </div>`,
+    {
+      title: "測驗結果", home: true, row: true,
+      actions: `<button class="btn ghost" id="again">再玩一次</button><button class="btn" id="share">分享結果</button>`
+    });
+  $("again").onclick = showStart;
+  $("share").onclick = async () => {
+    const text = `我在「假如你是一隻流浪貓」測驗中是「${type.name}」${type.emoji}！一起來看看街貓真實的處境吧。`;
+    const url = location.href.split("#")[0];
+    try {
+      if (navigator.share) await navigator.share({ title: document.title, text, url });
+      else { await navigator.clipboard.writeText(`${text} ${url}`); toast("已複製到剪貼簿 ✓"); }
+    } catch (_) { /* 使用者取消分享 */ }
+  };
+}
+
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+showStart();
+</script>
+</body>
+</html>
