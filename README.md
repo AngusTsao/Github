@@ -4,10 +4,13 @@
 
 ## 使用方式
 
-整個程式只有一個檔案 `index.html`，不需要網路也不需要安裝。
+整個程式只有一個檔案 `index.html`，不需要安裝。
 
-- **擺攤（平板／筆電）**：直接用瀏覽器開啟 `index.html`，建議開全螢幕。
-- **讓民眾用手機掃 QR Code**：開啟 GitHub Pages（Settings → Pages → 選這個分支的根目錄），再把網址做成 QR Code。
+- **iPad／手機（推薦）**：iPad 無法直接開啟下載的 HTML 檔，請用網址開啟：
+  - 線上版（Claude Artifact）：https://claude.ai/artifact/U3YZUFE7hzqMXSY6FvhLLz （預設僅本人登入可看，要給別人用請從頁面的「分享」開放）
+  - 或開啟 GitHub Pages（Settings → Pages → 選這個分支的根目錄），任何人都能用網址開啟。
+  - 用 Safari 開啟後，點「分享 → 加入主畫面」，就會像 App 一樣全螢幕開啟。
+- **筆電**：直接用瀏覽器開啟 `index.html`，不需要網路。
 
 ## 內容
 

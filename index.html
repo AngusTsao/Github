@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f7a541">
-<title>你是哪種街貓？｜貓掌守護聯盟</title>
+<title>你是哪種街貓？</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <style>
   :root {
+    color-scheme: light;
     --bg: #fff8ef;
     --card: #ffffff;
     --ink: #3b2a1e;
@@ -31,7 +33,7 @@
     min-height: 100vh;
     min-height: 100dvh;
   }
-  .app { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
+  .app { max-width: 640px; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .screen { display: none; animation: fade .35s ease; }
   .screen.active { display: block; }
   @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -602,18 +604,30 @@ function armIdle() {
 $("#btn-start").addEventListener("click", start);
 $("#btn-back").addEventListener("click", () => { if (current > 0) { current--; renderQuestion(); } });
 $("#btn-again").addEventListener("click", () => { clearTimeout(idleTimer); show("home"); });
-$("#btn-share").addEventListener("click", async () => {
+$("#btn-share").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
   const url = CONFIG.shareUrl || location.href;
   const data = { title: "你是哪種街貓？", text: `來測測你是哪種街貓，一起認識 TNVR、守護流浪貓！（${CONFIG.orgName}）`, url };
-  try {
-    if (navigator.share) await navigator.share(data);
-    else { await navigator.clipboard.writeText(url); alert("已複製連結！"); }
-  } catch {}
+  const flash = (msg) => { btn.textContent = msg; setTimeout(() => (btn.textContent = "分享這個測驗"), 2500); };
+  try { if (navigator.share) { await navigator.share(data); return; } } catch (err) { if (err && err.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(url); flash("已複製連結！"); } catch { flash(url); }
 });
 $("#btn-stats").addEventListener("click", renderStats);
 $("#btn-stats-back").addEventListener("click", () => show("home"));
-$("#btn-stats-reset").addEventListener("click", () => {
-  if (confirm("確定要清除所有統計嗎？")) { try { localStorage.removeItem(STAT_KEY); } catch {} renderStats(); }
+// 清除統計要按兩次，避免誤觸
+let resetArmed = false;
+$("#btn-stats-reset").addEventListener("click", (e) => {
+  const btn = e.currentTarget;
+  if (!resetArmed) {
+    resetArmed = true;
+    btn.textContent = "再按一次確定清除";
+    setTimeout(() => { resetArmed = false; btn.textContent = "清除統計"; }, 3000);
+    return;
+  }
+  resetArmed = false;
+  btn.textContent = "清除統計";
+  try { localStorage.removeItem(STAT_KEY); } catch {}
+  renderStats();
 });
 </script>
 </body>
