@@ -28,6 +28,8 @@
 | 檔案 | 用途 |
 |---|---|
 | `index.html` | 遊戲本體（畫面、關卡內容、程式） |
+| `config.js` | Google 試算表網址設定 |
+| `google-sheet/` | Apps Script 與設定步驟 |
 | `manifest.webmanifest` | App 名稱、圖示、全螢幕設定 |
 | `sw.js` | 離線快取 |
 | `.github/workflows/pages.yml` | 自動部署到 GitHub Pages |
@@ -37,6 +39,12 @@
 
 所有關卡文字都在 `index.html` 裡的 `SCENES` 陣列，結局類型在 `TYPES`，
 依年齡的建議在 `ageTips()`，可以直接編輯。
+
+## 統計（Google 試算表）
+
+每位玩家玩完會寫入你的 Google 試算表，遊戲裡會顯示「大家的選擇」，右上角 📊 是統計頁
+（性格分布、每關選項比例、年齡、地區）。設定步驟見 [`google-sheet/SETUP.md`](google-sheet/SETUP.md)；
+還沒設定時（根目錄 `config.js` 的 `sheetApi` 是空的），遊戲照樣可以玩，只是不記錄資料。
 
 ## 上線（GitHub Pages）
 
