@@ -507,15 +507,20 @@ const SHEET_API = (window.STRAY_CAT_CONFIG && window.STRAY_CAT_CONFIG.sheetApi) 
 const QUEUE_KEY = "straycat-outbox-v1";
 let aggCache = null, aggTime = 0;
 
+// 連線測試：回傳 { state: "ok" | "unreachable" | "wrong_script" | "error", agg, detail }
+async function probe() {
+  if (!SHEET_API) return { state: "off" };
+  let j;
+  try { j = await (await fetch(SHEET_API + (SHEET_API.includes("?") ? "&" : "?") + "t=" + Date.now())).json(); }
+  catch (_) { return { state: "unreachable" }; }
+  if (j && j.ok && j.service === "stray-cat") { aggCache = j; aggTime = Date.now(); return { state: "ok", agg: j }; }
+  if (j && j.ok === false) return { state: "error", detail: j.message || j.error || "" };
+  return { state: "wrong_script", detail: (j && j.service) || "" };
+}
 async function loadAgg(force) {
   if (!SHEET_API) return null;
   if (aggCache && !force && Date.now() - aggTime < 30000) return aggCache;
-  try {
-    const j = await (await fetch(SHEET_API + (SHEET_API.includes("?") ? "&" : "?") + "t=" + Date.now())).json();
-    if (!j || !j.ok || j.service !== "stray-cat") return null;
-    aggCache = j; aggTime = Date.now();
-    return j;
-  } catch (_) { return null; }
+  return (await probe()).agg || null;
 }
 
 function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; } catch (_) { return []; } }
@@ -615,17 +620,27 @@ $("statsBtn").onclick = () => showStats();
 
 async function showStats() {
   render(`<h2>📊 統計分析</h2><p class="muted">讀取中……</p>`, { title: "統計分析", home: true });
-  const agg = await loadAgg(true);
+  await flushQueue();
+  const pr = await probe();
+  const agg = pr.agg;
   if (!agg) {
-    render(`<h2>📊 統計分析</h2><p>目前讀不到統計資料，請確認網路連線後再試一次。</p>`,
-      { title: "統計分析", home: true, actions: `<button class="btn ghost" id="retry">重新讀取</button>` });
+    const why = {
+      unreachable: "連不到 Google Apps Script。請確認網路正常；如果網路沒問題，通常是 Apps Script 部署時「誰可以存取」沒有選「所有人」，或網址不是 <code>/exec</code> 結尾的那一個。",
+      wrong_script: `這個網址部署的不是本遊戲的 Apps Script${pr.detail ? `（它是「${esc(pr.detail)}」）` : ""}。請貼上 <code>google-sheet/apps-script.gs</code> 的內容，並用「管理部署作業 → 新版本」重新部署。`,
+      error: `Apps Script 回報錯誤：${esc(pr.detail)}`
+    }[pr.state];
+    const pending = readQueue().length;
+    render(`<h2>📊 統計分析</h2><div class="fact"><strong>⚠️ 試算表連線有問題</strong><p>${why}</p></div>
+      ${pending ? `<p class="stats-note">這台裝置有 ${pending} 筆結果還沒送出，連線恢復後會自動補送。</p>` : ""}`,
+      { title: "統計分析", home: true, actions: `<button class="btn ghost" id="retry">重新測試連線</button>` });
     $("retry").onclick = showStats;
     return;
   }
   const total = agg.total;
   if (!total) {
     render(`<h2>📊 統計分析</h2>
-      <p>還沒有人玩完遊戲。第一位玩家完成後，這裡就會出現大家的選擇、性格分布和年齡、地區統計。</p>`,
+      <p>還沒有人玩完遊戲。第一位玩家完成後，這裡就會出現大家的選擇、性格分布和年齡、地區統計。</p>
+      <p class="stats-note">✅ 已連線到試算表「${esc(agg.sheetName || "")}」，資料會寫在這一份。</p>`,
       { title: "統計分析", home: true, actions: `<button class="btn" id="play">我來當第一個</button>` });
     $("play").onclick = showStart;
     return;
@@ -669,7 +684,7 @@ async function showStats() {
       ${barList(topRegions.map(([label, n]) => ({ label, n })), total)}
     </div>
 
-    <p class="stats-note">統計只記錄年齡區間、居住地區、每關的選擇和結果，不記錄暱稱。數字約每 30 秒更新一次。</p>`,
+    <p class="stats-note">✅ 已連線到試算表「${esc(agg.sheetName || "")}」。統計只記錄年齡區間、居住地區、每關的選擇和結果，不記錄暱稱。數字約每 30 秒更新一次。</p>`,
     { title: "統計分析", home: true });
 }
 
