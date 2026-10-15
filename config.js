@@ -4,5 +4,5 @@
 // 玩家的作答就會寫進試算表，遊戲裡的「大家的選擇」和 📊 統計也會啟用。
 // 步驟見 google-sheet/SETUP.md。留空的話，遊戲照樣可以玩，只是不記錄資料。
 window.STRAY_CAT_CONFIG = {
-  sheetApi: ""
+  sheetApi: "https://script.google.com/macros/s/AKfycbyi4sJ87f0dnwpyoHYDpI8_hIq9pXslibWyL7Pmacadt2iNo25mn1DUa0r4iqngcL___g/exec"
 };
