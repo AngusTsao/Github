@@ -8,13 +8,13 @@
  *    執行身分：我；誰可以存取：所有人 → 部署，複製網址
  * 4. 把網址貼到根目錄 config.js 的 sheetApi
  *
- * 每位玩家玩完會新增一列。網頁讀到的只有加總後的統計（不含任何單筆資料）。
+ * 每位玩家玩完會新增一列。網頁讀到的只有加總後的統計（不含暱稱或任何單筆資料）。
  */
 
 const SERVICE = "stray-cat";
-const VERSION = 1;
+const VERSION = 2;
 const HEADER = ["時間", "年齡區間", "地區", "結果", "最終體力", "最終飽足",
-  "第1關", "第2關", "第3關", "第4關", "第5關", "第6關", "第7關", "第8關", "第9關"];
+  "第1關", "第2關", "第3關", "第4關", "第5關", "第6關", "第7關", "第8關", "第9關", "暱稱"];
 const AGES = ["12 歲以下", "13～17 歲", "18～24 歲", "25～34 歲", "35～44 歲", "45～54 歲", "55～64 歲", "65 歲以上"];
 const REGIONS = ["臺北市", "新北市", "基隆市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "臺中市",
   "彰化縣", "南投縣", "雲林縣", "嘉義市", "嘉義縣", "臺南市", "高雄市", "屏東縣",
@@ -64,8 +64,11 @@ function clean_(d) {
   const stat = v => Number.isInteger(v) && v >= 0 && v <= 100 ? v : null;
   const hp = stat(d.hp), food = stat(d.food);
   if (hp === null || food === null) return null;
+  // 暱稱：去掉控制字元、最多 12 個字；開頭是 = + - @ 時加上 ' 避免被當成公式
+  let nick = typeof d.nick === "string" ? d.nick.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 12) : "";
+  if (/^[=+\-@]/.test(nick)) nick = "'" + nick;
   const time = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm");
-  return [time, d.age, d.region, d.type, hp, food].concat(picks);
+  return [time, d.age, d.region, d.type, hp, food].concat(picks, [nick]);
 }
 
 /* 加總統計：網頁只會拿到這些數字 */
@@ -105,7 +108,12 @@ function stats_() {
 function sheet_() {
   const ss = spreadsheet_();
   const found = ss.getSheets().filter(s => s.getLastRow() > 0 && s.getRange(1, 1).getValue() === HEADER[0])[0];
-  if (found) return found;
+  if (found) {
+    // 舊版沒有「暱稱」欄：補上標題（加在最右邊，原有資料不用搬動）
+    const last = found.getRange(1, HEADER.length);
+    if (last.getValue() !== HEADER[HEADER.length - 1]) last.setValue(HEADER[HEADER.length - 1]);
+    return found;
+  }
   const blank = ss.getSheets().filter(s => s.getLastRow() === 0)[0];
   const sh = blank || ss.insertSheet("plays");
   sh.appendRow(HEADER);

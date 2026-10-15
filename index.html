@@ -502,7 +502,7 @@ function loadSave() {
 }
 
 // ---------- 統計：Google 試算表（設定見 google-sheet/SETUP.md）----------
-// 只送出年齡區間、地區、每關的選擇與結果，不送暱稱；讀回來的只有加總後的數字。
+// 送出暱稱、年齡區間、地區、每關的選擇與結果；暱稱只存在試算表，讀回來的只有加總後的數字。
 const SHEET_API = (window.STRAY_CAT_CONFIG && window.STRAY_CAT_CONFIG.sheetApi) || "";
 const QUEUE_KEY = "straycat-outbox-v1";
 let aggCache = null, aggTime = 0;
@@ -539,7 +539,7 @@ async function recordRun(typeName) {
   if (!SHEET_API) return;
   const run = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10),
-    age: state.age, region: state.region, type: typeName, picks: state.picks, hp: state.hp, food: state.food
+    nick: state.name, age: state.age, region: state.region, type: typeName, picks: state.picks, hp: state.hp, food: state.food
   };
   if (!(await postRun(run))) writeQueue([...readQueue(), run]);
   aggCache = null;
@@ -684,7 +684,7 @@ async function showStats() {
       ${barList(topRegions.map(([label, n]) => ({ label, n })), total)}
     </div>
 
-    <p class="stats-note">✅ 已連線到試算表「${esc(agg.sheetName || "")}」。統計只記錄年齡區間、居住地區、每關的選擇和結果，不記錄暱稱。數字約每 30 秒更新一次。</p>`,
+    <p class="stats-note">✅ 已連線到試算表「${esc(agg.sheetName || "")}」。統計頁只顯示加總後的數字，不會顯示任何人的暱稱。數字約每 30 秒更新一次。</p>`,
     { title: "統計分析", home: true });
 }
 
