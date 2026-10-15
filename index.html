@@ -187,6 +187,27 @@
   .resume span { flex: 1; font-size: .92rem; }
   .install { text-align: center; margin-top: 18px; }
   .install[hidden] { display: none; }
+  /* 統計 */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tile { background: var(--bg); border-radius: 14px; padding: 12px 8px; text-align: center; min-width: 0; }
+  .tile .num { display: block; font-size: 1.5rem; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; }
+  .tile small { color: var(--muted); font-size: .78rem; }
+  .bars { display: grid; gap: 10px; }
+  .hb { min-width: 0; }
+  .hb-top { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; font-size: .88rem; line-height: 1.5; }
+  .hb-top span:first-child { min-width: 0; }
+  .hb-top .val { flex: none; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .hb-top .val b { color: var(--ink); }
+  .hb-track { height: 10px; background: var(--line); border-radius: 0 4px 4px 0; margin-top: 4px; overflow: hidden; }
+  .hb-track i { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; transition: width .5s ease; }
+  .hb.mine .hb-track i { background: var(--ink); }
+  .you { font-size: .72rem; font-weight: 700; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 0 7px; margin-left: 4px; white-space: nowrap; }
+  .crowd { margin-top: 14px; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+  .crowd[hidden] { display: none; }
+  .crowd h4 { margin: 0 0 10px; font-size: .95rem; }
+  .qblock { margin-top: 18px; }
+  .qblock h4 { margin: 0 0 8px; font-size: .92rem; color: var(--muted); font-weight: 600; }
+  .stats-note { font-size: .82rem; color: var(--muted); margin-top: 10px; }
   .note { font-size: .78rem; color: var(--muted); text-align: center; margin-top: 24px; }
 
   /* 對話框 */
@@ -216,12 +237,14 @@
     <button class="icon-btn" id="homeBtn" aria-label="回到首頁" hidden>⌂</button>
     <div class="title" id="title">假如你是一隻流浪貓</div>
     <div class="chips" id="chips"></div>
+    <button class="icon-btn" id="statsBtn" aria-label="查看統計" hidden>📊</button>
     <div class="progress-line" id="progress" style="width:0"></div>
   </header>
   <main class="screen" id="screen"></main>
   <nav class="actions" id="actions"></nav>
 </div>
 
+<script src="config.js"></script>
 <script>
 const REGIONS = [
   "臺北市", "新北市", "基隆市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "臺中市",
@@ -454,7 +477,7 @@ const AGE_GROUPS = [
 ];
 
 const SAVE_KEY = "straycat-save-v1";
-const freshState = () => ({ name: "", age: "", tier: "", region: "", hp: 70, food: 50, traits: { brave: 0, careful: 0, social: 0, solo: 0 }, i: 0 });
+const freshState = () => ({ name: "", age: "", tier: "", region: "", hp: 70, food: 50, traits: { brave: 0, careful: 0, social: 0, solo: 0 }, i: 0, picks: [] });
 let state = freshState();
 let installPrompt = null;
 
@@ -478,6 +501,78 @@ function loadSave() {
   } catch (_) { return null; }
 }
 
+// ---------- 統計：Google 試算表（設定見 google-sheet/SETUP.md）----------
+// 只送出年齡區間、地區、每關的選擇與結果，不送暱稱；讀回來的只有加總後的數字。
+const SHEET_API = (window.STRAY_CAT_CONFIG && window.STRAY_CAT_CONFIG.sheetApi) || "";
+const QUEUE_KEY = "straycat-outbox-v1";
+let aggCache = null, aggTime = 0;
+
+async function loadAgg(force) {
+  if (!SHEET_API) return null;
+  if (aggCache && !force && Date.now() - aggTime < 30000) return aggCache;
+  try {
+    const j = await (await fetch(SHEET_API + (SHEET_API.includes("?") ? "&" : "?") + "t=" + Date.now())).json();
+    if (!j || !j.ok || j.service !== "stray-cat") return null;
+    aggCache = j; aggTime = Date.now();
+    return j;
+  } catch (_) { return null; }
+}
+
+function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; } catch (_) { return []; } }
+function writeQueue(q) { try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q.slice(-50))); } catch (_) {} }
+
+async function postRun(run) {
+  try {
+    const r = await fetch(SHEET_API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(run) });
+    const j = await r.json();
+    return !!j.ok || j.error === "bad_request"; // 被拒絕的資料不再重送
+  } catch (_) { return false; }
+}
+
+// 送出這一局；失敗（例如離線）就先存起來，下次打開時再送
+async function recordRun(typeName) {
+  if (!SHEET_API) return;
+  const run = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10),
+    age: state.age, region: state.region, type: typeName, picks: state.picks, hp: state.hp, food: state.food
+  };
+  if (!(await postRun(run))) writeQueue([...readQueue(), run]);
+  aggCache = null;
+}
+async function flushQueue() {
+  if (!SHEET_API) return;
+  const q = readQueue();
+  if (!q.length) return;
+  const left = [];
+  for (const run of q) if (!(await postRun(run))) left.push(run);
+  writeQueue(left);
+}
+
+const pct = (n, total) => total ? Math.round(n / total * 100) : 0;
+function barList(rows, total, mineIndex) {
+  return `<div class="bars">${rows.map((r, k) => `
+    <div class="hb${k === mineIndex ? " mine" : ""}" title="${esc(r.label)}：${r.n} 次（${pct(r.n, total)}%）">
+      <div class="hb-top"><span>${r.html || esc(r.label)}${k === mineIndex ? '<span class="you">你</span>' : ""}</span><span class="val"><b>${pct(r.n, total)}%</b> · ${r.n}</span></div>
+      <div class="hb-track"><i style="width:${pct(r.n, total)}%"></i></div>
+    </div>`).join("")}</div>`;
+}
+const choiceLabel = (q, k) => `${"ABC"[k]}．${SCENES[q].choices[k].text}`;
+const sum = a => a.reduce((x, y) => x + y, 0);
+
+async function crowdFor(q, mine) {
+  const agg = await loadAgg();
+  const box = $("crowd");
+  if (!box || !agg) return;
+  const counts = SCENES[q].choices.map((_, k) => (agg.picks[q] && agg.picks[q][k]) || 0);
+  const n = sum(counts);
+  box.innerHTML = n
+    ? `<h4>👥 大家的選擇：${pct(counts[mine], n)}% 的玩家和你一樣</h4>
+       ${barList(counts.map((c, k) => ({ label: choiceLabel(q, k), n: c })), n, mine)}
+       <p class="stats-note" style="margin-bottom:0">共 ${n} 次遊玩</p>`
+    : `<h4>👥 大家的選擇</h4><p class="stats-note" style="margin:0">你是第一個走到這裡的玩家！玩完後你的選擇就會列入統計。</p>`;
+  box.hidden = false;
+}
+
 // ---------- 畫面框架 ----------
 // opts: { title, game: 顯示關卡進度與數值, home: 顯示回首頁, actions: HTML, row: 按鈕並排 }
 function render(html, opts = {}) {
@@ -487,6 +582,7 @@ function render(html, opts = {}) {
   actions.classList.toggle("row", !!opts.row);
   $("title").textContent = opts.title || "假如你是一隻流浪貓";
   $("homeBtn").hidden = !opts.home;
+  $("statsBtn").hidden = !(opts.stats && SHEET_API);
   $("chips").innerHTML = opts.game
     ? `<span class="chip">❤️ ${state.hp}</span><span class="chip">🍚 ${state.food}</span>` : "";
   $("progress").style.width = opts.game ? `${(state.i + (opts.done ? 1 : 0)) / SCENES.length * 100}%` : "0";
@@ -513,6 +609,68 @@ function toast(msg) {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2000);
+}
+
+$("statsBtn").onclick = () => showStats();
+
+async function showStats() {
+  render(`<h2>📊 統計分析</h2><p class="muted">讀取中……</p>`, { title: "統計分析", home: true });
+  const agg = await loadAgg(true);
+  if (!agg) {
+    render(`<h2>📊 統計分析</h2><p>目前讀不到統計資料，請確認網路連線後再試一次。</p>`,
+      { title: "統計分析", home: true, actions: `<button class="btn ghost" id="retry">重新讀取</button>` });
+    $("retry").onclick = showStats;
+    return;
+  }
+  const total = agg.total;
+  if (!total) {
+    render(`<h2>📊 統計分析</h2>
+      <p>還沒有人玩完遊戲。第一位玩家完成後，這裡就會出現大家的選擇、性格分布和年齡、地區統計。</p>`,
+      { title: "統計分析", home: true, actions: `<button class="btn" id="play">我來當第一個</button>` });
+    $("play").onclick = showStart;
+    return;
+  }
+  const typeKeys = Object.keys(TYPES);
+  const typeN = k => agg.types[TYPES[k].name] || 0;
+  const topType = typeKeys.reduce((a, b) => typeN(b) > typeN(a) ? b : a);
+  const regions = Object.entries(agg.regions).sort((a, b) => b[1] - a[1]);
+  const topRegions = regions.slice(0, 8);
+  const otherN = sum(regions.slice(8).map(r => r[1]));
+  if (otherN) topRegions.push(["其餘地區", otherN]);
+
+  render(`
+    <h2>📊 統計分析</h2>
+    <div class="tiles">
+      <div class="tile"><span class="num">${total}</span><small>完成次數</small></div>
+      <div class="tile"><span class="num">${agg.avgHp}</span><small>平均最終體力</small></div>
+      <div class="tile"><span class="num">${pct(typeN(topType), total)}%</span><small>最多是${TYPES[topType].name}</small></div>
+    </div>
+
+    <div class="section">
+      <h3>貓咪性格分布</h3>
+      ${barList(typeKeys.map(k => ({ label: TYPES[k].name, html: `${TYPES[k].emoji} ${TYPES[k].name}`, n: typeN(k) })), total)}
+    </div>
+
+    <div class="section">
+      <h3>每一關，大家怎麼選</h3>
+      ${SCENES.map((sc, q) => {
+        const counts = sc.choices.map((_, k) => (agg.picks[q] && agg.picks[q][k]) || 0);
+        return `<div class="qblock"><h4>${sc.tag}</h4>${barList(counts.map((c, k) => ({ label: choiceLabel(q, k), n: c })), sum(counts))}</div>`;
+      }).join("")}
+    </div>
+
+    <div class="section">
+      <h3>玩家年齡</h3>
+      ${barList(AGE_GROUPS.map(g => ({ label: g.label, n: agg.ages[g.label] || 0 })), total)}
+    </div>
+
+    <div class="section">
+      <h3>玩家地區</h3>
+      ${barList(topRegions.map(([label, n]) => ({ label, n })), total)}
+    </div>
+
+    <p class="stats-note">統計只記錄年齡區間、居住地區、每關的選擇和結果，不記錄暱稱。數字約每 30 秒更新一次。</p>`,
+    { title: "統計分析", home: true });
 }
 
 $("homeBtn").onclick = () => {
@@ -552,7 +710,7 @@ function showStart() {
       <button class="btn small ghost" id="installBtn">📲 安裝到手機主畫面</button>
     </div>
     <p class="note">本遊戲內容為衛教用途，各地規定請以當地主管機關公告為準。</p>`,
-    { actions: `<button class="btn" type="submit" form="form">開始當一隻貓 🐈</button>` });
+    { stats: true, actions: `<button class="btn" type="submit" form="form">開始當一隻貓 🐈</button>` });
 
   if (saved) $("resume").onclick = () => { state = saved; showScene(); };
   updateInstall();
@@ -633,16 +791,19 @@ function choose(k) {
     if (!diff) return "";
     return `<span class="${diff > 0 ? "up" : "down"}">${label} ${diff > 0 ? "+" : ""}${diff}</span>`;
   };
+  state.picks = [...(state.picks || []).slice(0, state.i), k];
   const last = state.i === SCENES.length - 1;
   render(`
     <h2>結果</h2>
     <div class="delta">${d("❤️ 體力", before.hp, state.hp)}${d("🍚 飽足", before.food, state.food)}</div>
     <p>${fill(c.result)}</p>
-    <div class="fact"><strong>📖 ${c.fact.title}</strong><p>${c.fact.body}</p></div>`,
+    <div class="fact"><strong>📖 ${c.fact.title}</strong><p>${c.fact.body}</p></div>
+    <div class="crowd" id="crowd" hidden></div>`,
     {
       title: `第 ${state.i + 1} 關／共 ${SCENES.length} 關`, game: true, home: true, done: true,
       actions: `<button class="btn" id="next">${last ? "看看我是哪一種貓 →" : "繼續 →"}</button>`
     });
+  crowdFor(state.i, k);
   $("next").onclick = () => {
     state.i++;
     last ? showResult() : showScene();
@@ -728,10 +889,11 @@ function showResult() {
       </ul>
     </div>`,
     {
-      title: "測驗結果", home: true, row: true,
+      title: "測驗結果", home: true, row: true, stats: true,
       actions: `<button class="btn ghost" id="again">再玩一次</button><button class="btn" id="share">分享結果</button>`
     });
   $("again").onclick = showStart;
+  if (!state.recorded) { state.recorded = true; recordRun(type.name); }
   $("share").onclick = async () => {
     const text = `我在「假如你是一隻流浪貓」測驗中是「${type.name}」${type.emoji}！一起來看看街貓真實的處境吧。`;
     const url = location.href.split("#")[0];
@@ -746,6 +908,7 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 
+flushQueue();
 showStart();
 </script>
 </body>
