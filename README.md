@@ -88,5 +88,5 @@
 網址：https://angustsao.github.io/Github/street-cat-quiz/
 
 貓掌守護聯盟擺攤用的心理測驗：先填年齡、綽號、居住地區，回答 9 題後得出 6 種街貓之一，
-並帶出不餵食、TNVA/R、剪耳、不棄養等觀念。統計可同步到 Google 試算表（最多 1000 筆），
+並帶出不餵食、TNSA、剪耳、不棄養等觀念。統計可同步到 Google 試算表（最多 1000 筆），
 設定方式見 `street-cat-quiz/README.md`。
