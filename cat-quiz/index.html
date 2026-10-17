@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>巷口的貓：守護者測驗</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="結合心理測驗與知識問答的流浪貓議題互動遊戲：測出你是哪一種貓咪守護者，同時認識流浪貓的處境與 TNVR/A。">
+<meta name="description" content="結合心理測驗與知識問答的流浪貓議題互動遊戲：測出你是哪一種貓咪守護者，同時認識流浪貓的處境與 TNSA。">
 <meta name="theme-color" content="#EEF1EA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#131916" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -285,48 +285,49 @@ const CAT_SVG = `<svg class="cat" viewBox="0 0 130 140" aria-hidden="true">
 </svg>`;
 
 const TYPES = {
-  T: { seal: "紮", name: "行動派・絕育推手", desc: "看到問題就想動手解決。你適合加入 TNVR/A 誘捕、送醫的志工行列，從源頭讓街頭的貓不再越生越多。" },
+  T: { seal: "紮", name: "行動派・絕育推手", desc: "看到問題就想動手解決。你適合加入 TNSA 誘捕、送醫、安置的志工行列，從源頭讓街頭的貓不再越生越多。" },
   A: { seal: "家", name: "溫柔的認養家", desc: "你相信每隻貓都值得一個家。以領養代替購買、協助送養會，或成為中途，你能讓「A」真正發生。" },
   E: { seal: "林", name: "生態守望者", desc: "你看得見貓以外的生命：鳥、蜥蜴、石虎。你會提醒大家家貓不放養，讓人、貓和野生動物各有空間。" },
   S: { seal: "聲", name: "知識傳聲筒", desc: "你擅長把觀念說清楚。轉傳正確資訊、說服身邊的人不棄養，你的一句話可能改變一隻貓的命運。" }
 };
 
 // kind: "mind" = 心理測驗題（無對錯，計入守護者類型）；"quiz" = 知識題
+// retired: true = 已停用，不再出題；統計是用題目在陣列中的位置記錄，所以保留原位置，新題目一律加在最後
 const STEPS = [
   { kind: "mind", q: "下班路上，你看到一隻瘦巴巴的貓在垃圾桶旁翻找食物。你的第一個反應是？", opts: [
-    ["先拍照記錄位置，查查附近有沒有 TNVR 團體", "T"], ["心裡默默盤算：家裡還有沒有空間再多一隻", "A"],
+    ["先拍照記錄位置，查查附近有沒有協助 TNSA 的團體", "T"], ["心裡默默盤算：家裡還有沒有空間再多一隻", "A"],
     ["注意到旁邊草叢有鳥在築巢，有點擔心", "E"], ["發到社區群組，問大家該怎麼處理", "S"] ] },
   { kind: "quiz", q: "貓在台灣的生態定位為何？", opts: ["台灣原生種", "外來入侵種", "保育類動物", "瀕臨絕種"], ans: [1],
     ex: "家貓是人類帶來的物種，並非台灣原生。國際自然保護聯盟（IUCN）也將家貓列入「世界百大外來入侵種」。" },
   { kind: "quiz", q: "流浪貓主要的來源是什麼？", opts: ["人類棄養與走失", "野外自然繁殖", "人類放養"], ans: [0, 2], multi: true,
     ex: "源頭都是人：被丟棄、走失，或主人讓家貓自由進出（放養）。牠們在街頭繁殖後數量才越來越多。" },
-  { kind: "quiz", tnvr: 1, q: "TNVR/A 是控制流浪貓數量的方法。其中「T」代表什麼？", opts: ["Trap（捕捉）", "Track（追蹤）", "Train（訓練）", "Transfer（轉移）"], ans: [0],
+  { kind: "quiz", tnvr: 1, q: "TNSA 是減少流浪貓的方法。其中「T」代表什麼？", opts: ["Trap（捕捉）", "Track（追蹤）", "Train（訓練）", "Transfer（轉移）"], ans: [0],
     ex: "T = Trap，用誘捕籠以人道方式捕捉流浪貓。" },
-  { kind: "quiz", tnvr: 2, q: "TNVR/A 中的「N」代表什麼？", opts: ["Nurse（照護）", "Name（命名）", "Neuter（絕育）", "Notice（注意）"], ans: [2],
-    ex: "N = Neuter，絕育手術。完成絕育的貓，左耳會剪去一小角作為辨識。" },
-  { kind: "quiz", tnvr: 3, q: "TNVR/A 中的「V」代表什麼？", opts: ["Visit（探訪）", "Vaccinate（疫苗）", "View（檢查）", "Value（評估）"], ans: [1],
+  { kind: "quiz", tnvr: 2, q: "TNSA 中的「N」代表什麼？", opts: ["Nurse（照護）", "Name（命名）", "Neuter（絕育）", "Notice（注意）"], ans: [2],
+    ex: "N = Neuter，絕育手術，通常也會一起施打疫苗。完成絕育的貓，左耳會剪去一小角作為辨識。" },
+  { kind: "quiz", retired: true, q: "TNVR/A 中的「V」代表什麼？", opts: ["Visit（探訪）", "Vaccinate（疫苗）", "View（檢查）", "Value（評估）"], ans: [1],
     ex: "V = Vaccinate，施打狂犬病等疫苗，保護貓也保護人。" },
   { kind: "mind", q: "朋友興奮地說，想去寵物店買一隻品種貓。你會？", opts: [
     ["約他先去收容所或送養會看看", "A"], ["提醒他養貓要負責一輩子，也要記得絕育", "T"],
     ["叮嚀他：貓要養在室內，不要放出去亂跑", "E"], ["傳一篇棄養數據的文章給他參考", "S"] ] },
-  { kind: "quiz", tnvr: 4, q: "TNVR/A 中的「R」代表什麼？", opts: ["Recover（復原）", "Record（紀錄）", "Report（通報）", "Return（放回）"], ans: [3],
+  { kind: "quiz", retired: true, q: "TNVR/A 中的「R」代表什麼？", opts: ["Recover（復原）", "Record（紀錄）", "Report（通報）", "Return（放回）"], ans: [3],
     ex: "R = Return，術後放回原本生活的地方。" },
-  { kind: "quiz", tnvr: 5, q: "TNVR/A 中的「A」代表什麼？", opts: ["Adjust（調整）", "Accept（接受）", "Adopt（領養）", "Achieve（實現）"], ans: [2],
-    ex: "A = Adopt，親人的貓不放回街頭，而是推動認養，讓牠們有家。" },
+  { kind: "quiz", tnvr: 4, q: "TNSA 中的「A」代表什麼？", opts: ["Adjust（調整）", "Accept（接受）", "Adopt（領養）", "Achieve（實現）"], ans: [2],
+    ex: "A = Adopt，為貓找到認養家庭，讓牠們不再回到危險的街頭。" },
   { kind: "quiz", q: "流浪貓對野生動物的影響，哪些是正確的？", opts: ["沒有影響", "會捕食小型動物", "破壞生態平衡", "造成物種滅絕"], ans: [1, 2, 3], multi: true,
     ex: "貓是很有效率的掠食者，即使吃飽也會本能地狩獵。在世界各地的島嶼上，貓已造成多種鳥類與小型動物滅絕。" },
   { kind: "quiz", q: "下列哪一種動物可能受流浪貓影響？", opts: ["鳥類", "爬蟲類", "小型哺乳動物", "石虎", "以上皆是"], ans: [4],
     ex: "除了被捕食，石虎等野生貓科也可能從流浪貓身上感染疾病，或與牠們競爭食物和棲地。" },
   { kind: "mind", q: "社區裡有人每天在公園放一大盆飼料給貓吃。你會？", opts: [
-    ["找里長和餵食的鄰居，一起討論做 TNVR", "T"], ["先把親人的貓帶去送養", "A"],
+    ["找里長和餵食的鄰居，一起討論做 TNSA", "T"], ["先把親人的貓帶去送養", "A"],
     ["擔心食物吸引更多貓，也影響公園裡的鳥和松鼠", "E"], ["在社區群組分享正確的餵養觀念", "S"] ] },
   { kind: "quiz", q: "為什麼不建議隨意餵食流浪貓？", opts: ["吃飽後的貓咪行動力會增強，進而傷害更多小型野生動物", "造成聚集，增加繁殖數量", "讓流浪貓自尊心受損", "不當的餵食方式會造成環境髒亂"], ans: [0, 1, 3], multi: true,
     ex: "食物會讓貓聚集、繁殖，殘留飼料也會招來蟑螂老鼠。「自尊心」則不是理由。" },
   { kind: "quiz", q: "長期餵食，卻沒有幫貓絕育，最可能造成什麼問題？", opts: ["貓的數量不斷增加", "貓會變得比較親人", "貓會自己離開", "不會有任何影響"], ans: [0],
     ex: "一對未絕育的貓，一年可以生下好幾胎。只餵不紮，等於幫貓群持續擴大。" },
-  { kind: "quiz", q: "TNVR/A 最大的限制是什麼？", opts: ["人力不足", "無法完全阻止新貓加入", "費用太高", "操作困難"], ans: [1],
-    ex: "只要還有人棄養、放養，就會有新的貓進到街頭。所以飼主責任和 TNVR/A 一樣重要。" },
-  { kind: "quiz", q: "TNVA 與 TNVR 最大的差異是？", opts: ["有沒有餵食", "是否推動認養", "有沒有結紮", "有沒有紀錄"], ans: [1],
+  { kind: "quiz", q: "TNSA 最大的限制是什麼？", opts: ["人力不足", "無法完全阻止新貓加入", "費用太高", "操作困難"], ans: [1],
+    ex: "只要還有人棄養、放養，就會有新的貓進到街頭。所以飼主責任和 TNSA 一樣重要。" },
+  { kind: "quiz", retired: true, q: "TNVA 與 TNVR 最大的差異是？", opts: ["有沒有餵食", "是否推動認養", "有沒有結紮", "有沒有紀錄"], ans: [1],
     ex: "TNVR 把貓放回原地；TNVA 則讓貓被認養，不再回到街頭。" },
   { kind: "mind", q: "週末多出一整天空閒，你最想去做什麼？", opts: [
     ["去動保團體當誘捕、送醫志工", "T"], ["去中途之家陪貓，或幫忙辦送養會", "A"],
@@ -337,11 +338,17 @@ const STEPS = [
     ex: "領養減少需求、絕育減少出生、晶片登記讓走失的貓找得回家，也讓棄養有跡可循。" },
   { kind: "quiz", q: "流浪貓與野生動物衝突的核心原因是？", opts: ["食物競爭", "棲地重疊", "貓玩弄與獵殺的天性", "以上皆是"], ans: [3],
     ex: "貓和野生動物搶同一份食物、生活在同一片土地，加上狩獵本能，衝突就難以避免。" },
-  { kind: "quiz", q: "目前解決流浪貓問題的方法是？", opts: ["不隨意餵食流浪貓", "以領養代替購買", "不棄養，加強飼主責任", "協助執行 TNVR/A", "以上皆是"], ans: [4],
-    ex: "沒有單一解方。每個人做一點，街頭的貓就少一點，野生動物也多一點空間。" }
+  { kind: "quiz", q: "目前解決流浪貓問題的方法是？", opts: ["不隨意餵食流浪貓", "以領養代替購買", "不棄養，加強飼主責任", "協助執行 TNSA", "以上皆是"], ans: [4],
+    ex: "沒有單一解方。每個人做一點，街頭的貓就少一點，野生動物也多一點空間。" },
+  { kind: "quiz", tnvr: 3, q: "TNSA 中的「S」代表什麼？", opts: ["Search（搜尋）", "Shelter（安置）", "Share（分享）", "Survey（調查）"], ans: [1],
+    ex: "S = Shelter，絕育後先在中途或收容處所安置照顧，追蹤健康、練習親人，為送養做準備。" },
+  { kind: "quiz", q: "TNSA 的正確順序是？", opts: ["絕育 → 誘捕 → 送養 → 安置", "誘捕 → 絕育 → 安置 → 送養", "安置 → 誘捕 → 絕育 → 送養", "送養 → 安置 → 絕育 → 誘捕"], ans: [1],
+    ex: "先用誘捕籠捕捉（T），由獸醫絕育並施打疫苗（N），再安置照顧（S），最後幫牠找到家（A）。" },
+  { kind: "quiz", q: "為什麼 TNSA 要先「安置」再「送養」？", opts: ["讓貓恢復健康、慢慢習慣與人相處", "法律規定一定要關起來", "讓貓忘記原本的地盤", "安置可以向領養人收費"], ans: [0],
+    ex: "剛絕育的貓需要休養與健康追蹤，怕人的貓也需要時間社會化。安置讓牠們準備好，才能順利走進新家。" }
 ];
 
-const PLEDGES = ["我不棄養，也不讓家貓在外放養", "我會以領養代替購買", "我支持並協助 TNVR/A", "我不隨意餵食街頭的貓", "我會把今天學到的分享給一個人"];
+const PLEDGES = ["我不棄養，也不讓家貓在外放養", "我會以領養代替購買", "我支持並協助 TNSA", "我不隨意餵食街頭的貓", "我會把今天學到的分享給一個人"];
 
 const AGES = ["12歲以下", "13–18歲", "19–24歲", "25–34歲", "35–44歲", "45–54歲", "55–64歲", "65歲以上"];
 const REGIONS = ["基隆市", "臺北市", "新北市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "臺中市", "彰化縣", "南投縣", "雲林縣", "嘉義市", "嘉義縣", "臺南市", "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "臺東縣", "澎湖縣", "金門縣", "連江縣", "海外"];
@@ -353,7 +360,7 @@ const IDLE_MS = 90000, IDLE_COUNTDOWN = 15;
 
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 function drawOrder() {
-  const idx = k => STEPS.map((s, i) => s.kind === k ? i : -1).filter(i => i >= 0);
+  const idx = k => STEPS.map((s, i) => s.kind === k && !s.retired ? i : -1).filter(i => i >= 0);
   const mind = shuffle(idx("mind")).slice(0, MIND_PER_GAME);
   const quiz = shuffle(idx("quiz")).slice(0, MAX_STEPS - mind.length);
   return shuffle([...mind, ...quiz]);
@@ -397,7 +404,7 @@ function viewIntro() {
         </div>
         ${CAT_SVG}
       </div>
-      <p class="notch-note">看看這隻貓的<b>左耳</b>，少了一角。這是「已絕育」的記號：在街頭看到剪耳的貓，代表有人已經為牠做過 TNVR。</p>
+      <p class="notch-note">看看這隻貓的<b>左耳</b>，少了一角。這是「已絕育」的記號：在街頭看到剪耳的貓，代表牠已經結紮過了，可以聯繫動保團體協助安置與送養。</p>
     </section>
     <section class="card">
       <h2>街頭的貓，是從哪裡來的？</h2>
@@ -456,7 +463,7 @@ function viewStep() {
   const isQuiz = st.kind === "quiz", multi = isQuiz && st.multi;
   const head = multi
     ? `<div class="multi-banner"><span class="big">複選題</span><span>答案不只一個！全部選好後，按下方「確認答案」</span></div>`
-    : `<span class="tag ${isQuiz ? "quiz" : "mind"}">${isQuiz ? (st.tnvr ? "TNVR/A 解碼" : "知識題") : "心理測驗・憑直覺選"}</span>`;
+    : `<span class="tag ${isQuiz ? "quiz" : "mind"}">${isQuiz ? (st.tnvr ? "TNSA 解碼" : "知識題") : "心理測驗・憑直覺選"}</span>`;
   const opts = (isQuiz ? st.opts.map(o => [o]) : st.opts).map((o, k) => {
     let cls = "opt" + (multi ? " multi" : "");
     if (S.picked.includes(k)) cls += " picked";
@@ -761,7 +768,7 @@ function drawStats() {
     const got = rows.map(v => v.answers && v.answers[i]).filter(x => x === 0 || x === 1);
     if (!got.length) return;
     const ok = got.filter(x => x === 1).length;
-    qRows.push({ label: st.q, v: pct(ok, got.length), n: got.length, labelHtml: `${esc(st.q)} <small>（${st.multi ? "複選・" : ""}${got.length} 人作答）</small>` });
+    qRows.push({ label: st.q, v: pct(ok, got.length), n: got.length, labelHtml: `${esc(st.q)} <small>（${st.retired ? "已停用・" : ""}${st.multi ? "複選・" : ""}${got.length} 人作答）</small>` });
   });
   qRows.sort((a, b) => a.v - b.v);
 
