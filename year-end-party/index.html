@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<title>尾牙報到台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#F7F2EA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17120F" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23A8261B'/%3E%3Cpath d='M18 33l9 9 19-20' fill='none' stroke='%23F3D27A' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Apps Script 網址與活動名稱放在 config.js -->
+<script src="config.js"></script>
+<script src="vendor/jsQR.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 報到台 — 上方狀態列；手機為相機→結果→人工查詢直排，電腦為左（相機＋人工查詢）右（大結果卡）兩欄。 */
+:root {
+  --bg: #F7F2EA; --card: #FFFDF9; --ink: #241B16; --muted: #6E625A; --line: #E4DAD0;
+  --brand: #A8261B; --gold: #B98A1E;
+  --ok: #1F7A45; --ok-soft: #DDF1E4; --dup: #A85E00; --dup-soft: #FBEBD3;
+  --err: #B3261E; --err-soft: #F8DEDA; --wait: #4A5A6E; --wait-soft: #E3E8EF;
+  --veg: #2E7D32;
+  --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --gl: max(16px, env(safe-area-inset-left, 0px)); --gr: max(16px, env(safe-area-inset-right, 0px));
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17120F; --card: #221B17; --ink: #F1E9E1; --muted: #B3A69C; --line: #3A2F29;
+  --brand: #E0574A; --gold: #E2B54A;
+  --ok: #5CCB8A; --ok-soft: #173826; --dup: #F0A646; --dup-soft: #3D2A10;
+  --err: #F27367; --err-soft: #431915; --wait: #A9B8CC; --wait-soft: #252D38;
+  --veg: #7BD67F; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #17120F; --card: #221B17; --ink: #F1E9E1; --muted: #B3A69C; --line: #3A2F29;
+  --brand: #E0574A; --gold: #E2B54A;
+  --ok: #5CCB8A; --ok-soft: #173826; --dup: #F0A646; --dup-soft: #3D2A10;
+  --err: #F27367; --err-soft: #431915; --wait: #A9B8CC; --wait-soft: #252D38;
+  --veg: #7BD67F; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); }
+body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom, 0px); -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+.btn { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px 14px; font-weight: 500; min-height: 44px; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 700; }
+.btn.ok { background: var(--ok); border-color: var(--ok); color: #fff; font-weight: 700; }
+.btn.small { min-height: 36px; padding: 6px 12px; font-size: 14px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.field { width: 100%; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 12px 14px; font-size: 17px; min-height: 48px; }
+.field:focus, .btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 40%, transparent); outline-offset: 1px; }
+
+/* ---------- 登入 ---------- */
+.login { max-width: 420px; margin: 0 auto; padding: 48px var(--gr) 32px var(--gl); }
+.login .mark { width: 56px; height: 56px; border-radius: 14px; background: var(--brand); display: grid; place-items: center; margin-bottom: 16px; }
+.login h1 { margin: 0 0 4px; font-size: 26px; font-weight: 900; }
+.login p.sub { margin: 0 0 28px; color: var(--muted); }
+.login label { display: block; font-weight: 500; margin: 16px 0 6px; }
+.login .btn { width: 100%; margin-top: 24px; font-size: 18px; min-height: 52px; }
+.msg { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--err-soft); color: var(--err); font-weight: 500; }
+
+/* ---------- 上方狀態列 ---------- */
+.top { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); padding: calc(10px + env(safe-area-inset-top, 0px)) var(--gr) 10px var(--gl); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.top .title { font-weight: 900; font-size: 18px; margin-right: auto; display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.top .title small { font-weight: 500; font-size: 14px; color: var(--muted); white-space: nowrap; }
+.count { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 18px; white-space: nowrap; }
+.count small { color: var(--muted); font-weight: 500; font-size: 14px; }
+.bar { flex-basis: 100%; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .4s; }
+.net { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.net::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+.net.off { color: var(--dup); font-weight: 500; }
+.net.off::before { background: var(--dup); }
+
+/* ---------- 主畫面 ---------- */
+.main { display: grid; gap: 16px; padding: 16px var(--gr) 32px var(--gl); grid-template-areas: "scan" "result" "manual"; max-width: 1280px; margin: 0 auto; }
+@media (min-width: 900px) {
+  .main { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-areas: "scan result" "manual result"; align-items: start; }
+  .result { position: sticky; top: 92px; min-height: 480px; }
+}
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+.panel h2 { margin: 0 0 10px; font-size: 16px; color: var(--muted); font-weight: 500; }
+
+.scan { grid-area: scan; }
+.cam { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 4 / 3; max-height: 38vh; width: 100%; margin: 0 auto; }
+@media (min-width: 900px) { .cam { max-height: 46vh; } }
+.cam video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cam .frame { position: absolute; inset: 14% 22%; border: 3px solid rgba(255,255,255,.85); border-radius: 14px; box-shadow: 0 0 0 999px rgba(0,0,0,.25); pointer-events: none; }
+.cam .off { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #eee; padding: 16px; gap: 12px; align-content: center; }
+.cam .off p { margin: 0; font-size: 15px; line-height: 1.6; }
+.camtools { display: flex; gap: 8px; margin-top: 10px; }
+.camtools .btn { flex: 1; }
+
+.result { grid-area: result; border-radius: 16px; padding: 22px; border: 2px solid var(--line); background: var(--card); display: flex; flex-direction: column; gap: 14px; }
+.result.ok { background: var(--ok-soft); border-color: var(--ok); }
+.result.dup { background: var(--dup-soft); border-color: var(--dup); }
+.result.err { background: var(--err-soft); border-color: var(--err); }
+.result.wait { background: var(--wait-soft); border-color: var(--wait); }
+.status { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 900; }
+.status .ic { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; color: #fff; }
+.ok .status { color: var(--ok); } .ok .ic { background: var(--ok); }
+.dup .status { color: var(--dup); } .dup .ic { background: var(--dup); }
+.err .status { color: var(--err); } .err .ic { background: var(--err); }
+.wait .status { color: var(--wait); } .wait .ic { background: var(--wait); }
+.idle .status { color: var(--muted); } .idle .ic { background: var(--muted); }
+.who { font-size: clamp(36px, 9vw, 64px); font-weight: 900; line-height: 1.1; word-break: break-all; }
+.who small { display: block; font-size: 18px; font-weight: 500; color: var(--muted); margin-top: 6px; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.fact { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.fact span { display: block; font-size: 13px; color: var(--muted); }
+.fact b { display: block; font-size: clamp(24px, 6vw, 40px); font-weight: 900; line-height: 1.2; font-variant-numeric: tabular-nums; word-break: break-all; }
+.fact.veg { border-color: var(--veg); background: color-mix(in srgb, var(--veg) 12%, var(--card)); }
+.fact.veg b { color: var(--veg); }
+.note { font-size: 15px; line-height: 1.6; color: var(--ink); }
+.note.muted { color: var(--muted); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.actions .btn { flex: 1; min-height: 52px; font-size: 18px; }
+.actions .btn.small { flex: none; min-height: 36px; font-size: 14px; }
+.hint { color: var(--muted); font-size: 15px; line-height: 1.7; margin: 0; }
+
+.manual { grid-area: manual; }
+.results { list-style: none; margin: 8px 0 0; padding: 0; }
+.results li button { width: 100%; text-align: left; display: flex; align-items: center; gap: 10px; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 12px 4px; min-height: 56px; }
+.results li:last-child button { border-bottom: 0; }
+.results li button > span:first-child { flex: 1; min-width: 0; }
+.results .n { font-weight: 700; font-size: 18px; }
+.results .d { color: var(--muted); font-size: 14px; }
+.results .tag { margin-left: auto; font-size: 13px; padding: 3px 8px; border-radius: 999px; white-space: nowrap; background: var(--line); color: var(--muted); }
+.results .tag.in { background: var(--ok-soft); color: var(--ok); font-weight: 700; }
+.empty { color: var(--muted); padding: 10px 4px; font-size: 15px; }
+.recent { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+.recent h3 { margin: 0 0 6px; font-size: 14px; color: var(--muted); font-weight: 500; }
+.recent ol { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.recent li { display: flex; gap: 8px; padding: 4px 0; }
+.recent li time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.recent li .p { color: var(--dup); }
+.flash { animation: flash .35s ease-out; }
+@keyframes flash { from { transform: scale(.98); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
+</style>
+</head>
+<body>
+
+<!-- 登入 -->
+<section class="login" id="login" hidden>
+  <div class="mark"><svg width="32" height="32" viewBox="0 0 64 64" aria-hidden="true"><path d="M14 33l11 11 25-26" fill="none" stroke="#F3D27A" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <h1 id="loginTitle">尾牙報到台</h1>
+  <p class="sub">工作人員登入後即可開始掃描報到</p>
+  <form id="loginForm">
+    <label for="pw">工作人員密碼</label>
+    <input class="field" id="pw" type="password" autocomplete="current-password" required>
+    <label for="station">這一台的名稱</label>
+    <input class="field" id="station" placeholder="例如：報到台 1" maxlength="20" required>
+    <button class="btn primary" type="submit" id="loginBtn">登入</button>
+  </form>
+  <div class="msg" id="loginMsg" hidden></div>
+</section>
+
+<!-- 報到 -->
+<div id="app" hidden>
+  <header class="top">
+    <div class="title"><span id="evName">尾牙報到</span><small id="stName"></small></div>
+    <div class="count" aria-live="polite"><span id="cIn">0</span> <small>/ <span id="cAll">0</span> 人已報到</small></div>
+    <span class="net" id="net">已連線</span>
+    <button class="btn small" id="logout" type="button">登出</button>
+    <div class="bar" aria-hidden="true"><i id="cBar"></i></div>
+  </header>
+
+  <main class="main">
+    <section class="panel scan" aria-label="掃描 QR Code">
+      <div class="cam">
+        <video id="video" playsinline muted></video>
+        <div class="frame" id="frame" hidden></div>
+        <div class="off" id="camOff">
+          <p id="camMsg">點下方「開啟相機」開始掃描</p>
+        </div>
+      </div>
+      <div class="camtools">
+        <button class="btn primary" id="camBtn" type="button">開啟相機</button>
+        <button class="btn" id="camSwitch" type="button" hidden>切換鏡頭</button>
+      </div>
+    </section>
+
+    <section class="result idle" id="result" aria-live="assertive"></section>
+
+    <section class="panel manual" aria-label="人工報到">
+      <h2>QR Code 掃不到？輸入員工編號或姓名</h2>
+      <input class="field" id="q" type="search" placeholder="員工編號或姓名（也可用條碼掃描槍）" autocomplete="off" enterkeyhint="search">
+      <ul class="results" id="hits"></ul>
+      <div class="recent" id="recentBox" hidden>
+        <h3>這一台最近報到</h3>
+        <ol id="recent"></ol>
+      </div>
+    </section>
+  </main>
+</div>
+
+<canvas id="canvas" hidden></canvas>
+
+<script>
+const CFG = window.YEP_CONFIG || {};
+const API = (CFG.sheetApi || "").trim();
+const EVENT = CFG.eventName || "尾牙";
+const KEYS = { auth: "yep-auth", station: "yep-station", cache: "yep-cache", pending: "yep-pending", recent: "yep-recent" };
+const POLL_MS = 20000;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const hhmm = t => { const m = String(t || "").match(/(\d{1,2}:\d{2})(:\d{2})?\s*$/); return m ? m[1] : String(t || ""); };
+const clock = (d = new Date()) => d.toTimeString().slice(0, 5);
+const fullTime = ms => { const d = new Date(ms), p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
+const isVeg = meal => /素/.test(meal || "");
+
+let auth = store.get(KEYS.auth, null);         // { pw, station }
+let employees = [], byToken = new Map(), byId = new Map();
+let server = {};                                // 員工編號 → { time, method, station }（伺服器上的報到狀態）
+let pending = store.get(KEYS.pending, []);      // 離線時先記在這台的報到：{ id, method, station, at }
+let recent = store.get(KEYS.recent, []);        // 這一台最近的報到：{ name, time, pending }
+let online = true, lastSync = 0, view = { kind: "idle" }, seq = 0;
+
+/* ---------- 與 Apps Script 溝通 ---------- */
+async function api(body, ms = 12000) {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms);
+  let j;
+  try {
+    const r = await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(Object.assign({ pw: auth && auth.pw, station: auth && auth.station }, body)), signal: ctl.signal });
+    j = await r.json();
+  } catch (e) {
+    throw { code: "network" };
+  } finally { clearTimeout(timer); }
+  if (!j.ok) {
+    if (j.error === "unauthorized" && auth) { logout(true, "密碼已變更或不正確，請重新登入。"); }
+    throw { code: j.error || "server_error", message: j.message };
+  }
+  return j;
+}
+
+function setData(list, checkins) {
+  employees = list || [];
+  byToken = new Map(); byId = new Map();
+  for (const e of employees) { if (e.token) byToken.set(e.token, e); byId.set(e.id, e); }
+  server = checkins || {};
+}
+
+async function sync() {
+  if (!auth || !API) return;
+  await flushPending();
+  try {
+    const j = await api({ action: "list" });
+    setData(j.employees, j.checkins);
+    store.set(KEYS.cache, { employees, server, at: Date.now() });
+    lastSync = Date.now();
+    setOnline(true);
+  } catch (e) {
+    if (e.code === "network") setOnline(false);
+    else if (e.code !== "unauthorized") showError(e);
+  }
+  renderCount();
+}
+
+// 把離線時記下的報到補傳上去（伺服器會用當時的時間記錄）
+async function flushPending() {
+  while (pending.length) {
+    const p = pending[0];
+    try {
+      const j = await api({ action: "checkin", id: p.id, method: p.method, at: p.at });
+      if (j.first) server[p.id] = j.first;
+    } catch (e) {
+      if (e.code === "network") { setOnline(false); return; }
+      if (e.code === "unauthorized") return;
+    }
+    pending.shift();
+    store.set(KEYS.pending, pending);
+  }
+}
+
+function setOnline(v) {
+  online = v;
+  const n = $("net");
+  n.classList.toggle("off", !v);
+  n.textContent = v
+    ? "已連線" + (lastSync ? "・" + clock(new Date(lastSync)) + " 更新" : "")
+    : "離線" + (pending.length ? `・${pending.length} 筆待上傳` : "・使用暫存名單");
+}
+
+/* ---------- 報到 ---------- */
+function statusOf(id) {
+  const p = pending.find(x => x.id === id);
+  if (p) return { time: fullTime(p.at), method: p.method, station: p.station, pending: true };
+  return server[id] || null;
+}
+
+function onCode(raw) {
+  let t = String(raw || "").trim();
+  const m = t.match(/[?&]t=([A-Za-z0-9]+)/);
+  if (m) t = m[1];
+  t = t.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!t) return;
+  const emp = byToken.get(t);
+  if (emp) return checkin(emp, "QR");
+  // 這台的名單裡沒有：可能名單剛更新過，連線時再問一次伺服器
+  if (online) return checkin(null, "QR", t);
+  show({ kind: "notfound" });
+  beep("err");
+}
+
+async function checkin(emp, method, token) {
+  if (emp) {
+    const prev = statusOf(emp.id);
+    if (prev) { show({ kind: "dup", emp, prev }); beep("dup"); return; }
+  }
+  const my = ++seq;
+  show({ kind: "pending", emp });
+  try {
+    const j = await api(emp ? { action: "checkin", id: emp.id, method } : { action: "checkin", token, method });
+    setOnline(true);
+    if (j.result === "notfound") { if (my === seq) show({ kind: "notfound" }); beep("err"); return; }
+    const e = j.employee;
+    server[e.id] = j.first;
+    if (!byId.has(e.id)) sync();
+    renderCount();
+    if (j.result === "dup") { if (my === seq) show({ kind: "dup", emp: e, prev: j.first }); beep("dup"); return; }
+    addRecent(e, false);
+    if (my === seq) show({ kind: "ok", emp: e });
+    beep("ok");
+  } catch (err) {
+    if (err.code === "unauthorized") return;
+    if (err.code !== "network") { if (my === seq) showError(err); beep("err"); return; }
+    setOnline(false);
+    if (!emp) { if (my === seq) show({ kind: "notfound" }); beep("err"); return; }
+    // 斷線：先記在這台，恢復連線後自動補上傳
+    pending.push({ id: emp.id, method, station: auth.station, at: Date.now() });
+    store.set(KEYS.pending, pending);
+    setOnline(false);
+    addRecent(emp, true);
+    renderCount();
+    if (my === seq) show({ kind: "ok", emp, offline: true });
+    beep("ok");
+  }
+}
+
+async function undo(emp) {
+  if (!confirm(`確定要取消「${emp.name}」的報到嗎？`)) return;
+  const i = pending.findIndex(x => x.id === emp.id);
+  if (i >= 0) {
+    pending.splice(i, 1);
+    store.set(KEYS.pending, pending);
+  } else {
+    try {
+      await api({ action: "undo", id: emp.id });
+    } catch (e) {
+      if (e.code === "network") { alert("目前離線，取消報到需要連線，請稍後再試。"); setOnline(false); }
+      else if (e.code !== "unauthorized") showError(e);
+      return;
+    }
+  }
+  delete server[emp.id];
+  renderCount();
+  show({ kind: "undone", emp });
+  sync();
+}
+
+function addRecent(emp, isPending) {
+  recent.unshift({ name: emp.name, time: clock(), pending: isPending });
+  recent = recent.slice(0, 8);
+  store.set(KEYS.recent, recent);
+  renderRecent();
+}
+
+/* ---------- 畫面 ---------- */
+const ICONS = {
+  ok: '<path d="M6 12.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  dup: '<path d="M12 7v6M12 16.5v.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+  err: '<path d="M7.5 7.5l9 9M16.5 7.5l-9 9" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+  wait: '<circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="26 12"/>',
+  idle: '<rect x="5" y="5" width="5" height="5" rx="1" fill="currentColor"/><rect x="14" y="5" width="5" height="5" rx="1" fill="currentColor"/><rect x="5" y="14" width="5" height="5" rx="1" fill="currentColor"/><path d="M14 14h2v2h-2zM17 17h2v2h-2z" fill="currentColor"/>'
+};
+const statusLine = (tone, text) => `<div class="status"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">${ICONS[tone]}</svg></span>${esc(text)}</div>`;
+
+function personBlock(emp) {
+  const veg = isVeg(emp.meal);
+  return `<div class="who">${esc(emp.name)}<small>${esc([emp.dept, "員編 " + emp.id].filter(Boolean).join("・"))}</small></div>
+    <div class="facts">
+      <div class="fact"><span>桌號</span><b>${esc(emp.table || "—")}</b></div>
+      <div class="fact${veg ? " veg" : ""}"><span>餐點</span><b>${esc(emp.meal || "—")}</b></div>
+      <div class="fact"><span>抽獎編號</span><b>${esc(emp.lottery || "—")}</b></div>
+    </div>`;
+}
+
+function show(v) {
+  view = v;
+  const el = $("result");
+  let tone = "idle", html = "";
+  const prevLine = p => `第一次報到：${hhmm(p.time)}${p.station ? "・" + p.station : ""}${p.method ? "（" + p.method + "）" : ""}${p.pending ? "・尚未上傳" : ""}`;
+  switch (v.kind) {
+    case "pending":
+      tone = "wait";
+      html = statusLine("wait", "報到中…") + (v.emp ? personBlock(v.emp) : "");
+      break;
+    case "ok":
+      tone = "ok";
+      html = statusLine("ok", "報到成功") + personBlock(v.emp)
+        + (isVeg(v.emp.meal) ? `<div class="note"><b>素食</b>：請提醒入座後告知服務人員，或依現場安排發放素食餐券。</div>` : "")
+        + (v.offline ? `<div class="note muted">目前離線，這筆報到先記在這台，恢復連線後會自動上傳。</div>` : "");
+      break;
+    case "dup":
+      tone = "dup";
+      html = statusLine("dup", "已經報到過") + personBlock(v.emp)
+        + `<div class="note">${esc(prevLine(v.prev))}</div>`
+        + `<div class="note muted">若是本人重複出示可直接入場；若不是本人，請核對身分。</div>`
+        + `<div class="actions"><button class="btn small" type="button" data-act="undo">取消這筆報到</button></div>`;
+      break;
+    case "notfound":
+      tone = "err";
+      html = statusLine("err", "查無此 QR Code")
+        + `<p class="hint">這個 QR Code 不在報到名單內，或代碼錯誤。<br>請改用下方「輸入員工編號或姓名」查詢；仍查不到請洽活動負責人。</p>`;
+      break;
+    case "confirm":
+      tone = "wait";
+      html = statusLine("wait", "人工報到：請核對身分") + personBlock(v.emp)
+        + `<div class="actions"><button class="btn" type="button" data-act="cancel">取消</button><button class="btn ok" type="button" data-act="confirm">確認報到</button></div>`;
+      break;
+    case "undone":
+      tone = "idle";
+      html = statusLine("idle", "已取消報到") + `<p class="hint">已取消「${esc(v.emp.name)}」的報到，可以重新報到。</p>`;
+      break;
+    case "error":
+      tone = "err";
+      html = statusLine("err", "發生錯誤") + `<p class="hint">${esc(v.text)}</p>`;
+      break;
+    default:
+      html = statusLine("idle", "等待掃描")
+        + `<p class="hint">請員工出示報到信中的 QR Code，對準相機框框即可。<br>掃不到時，在${matchMedia("(min-width: 900px)").matches ? "左" : "上"}方輸入員工編號或姓名。</p>`;
+  }
+  el.className = "result " + tone;
+  el.innerHTML = html;
+  if (v.kind !== "pending") { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+  if (v.emp) {
+    el.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
+      const act = b.dataset.act;
+      if (act === "confirm") { checkin(v.emp, "人工"); $("q").value = ""; renderHits(); }
+      else if (act === "undo") undo(v.emp);
+      else show({ kind: "idle" });
+    });
+  }
+}
+
+function showError(e) {
+  const text = {
+    no_password: "Apps Script 還沒設定工作人員密碼：請在試算表上方選單「尾牙報到」→「設定工作人員密碼」。",
+    server_error: "試算表發生錯誤：" + (e.message || "") + "（請確認「名單」分頁第 1 列有「員工編號」「姓名」「報到代碼」）"
+  }[e.code] || "無法完成，請再試一次。";
+  show({ kind: "error", text });
+}
+
+function renderCount() {
+  const ids = new Set(Object.keys(server).filter(id => byId.has(id)));
+  pending.forEach(p => ids.add(p.id));
+  const all = employees.length;
+  $("cIn").textContent = ids.size;
+  $("cAll").textContent = all;
+  $("cBar").style.width = all ? Math.min(100, ids.size / all * 100) + "%" : "0";
+  if (online) setOnline(true); else setOnline(false);
+  if (document.activeElement !== $("q") || $("q").value) renderHits();
+}
+
+function renderRecent() {
+  $("recentBox").hidden = !recent.length;
+  $("recent").innerHTML = recent.map(r => `<li><time>${esc(r.time)}</time><span>${esc(r.name)}</span>${r.pending ? '<span class="p">（離線暫存）</span>' : ""}</li>`).join("");
+}
+
+/* ---------- 人工查詢 ---------- */
+const norm = s => String(s || "").toLowerCase().replace(/\s+/g, "");
+function search(q) {
+  q = norm(q);
+  if (!q) return [];
+  const scored = [];
+  for (const e of employees) {
+    const id = norm(e.id), name = norm(e.name);
+    let s = -1;
+    if (id === q || name === q) s = 0;
+    else if (id.startsWith(q) || name.startsWith(q)) s = 1;
+    else if (id.includes(q) || name.includes(q)) s = 2;
+    if (s >= 0) scored.push([s, e]);
+  }
+  return scored.sort((a, b) => a[0] - b[0]).slice(0, 8).map(x => x[1]);
+}
+
+function renderHits() {
+  const q = $("q").value, hits = search(q), ul = $("hits");
+  if (!q.trim()) { ul.innerHTML = ""; return; }
+  if (!hits.length) { ul.innerHTML = `<li class="empty">查無「${esc(q.trim())}」，請確認員工編號或姓名。</li>`; return; }
+  ul.innerHTML = hits.map((e, i) => {
+    const st = statusOf(e.id);
+    return `<li><button type="button" data-i="${i}"><span><span class="n">${esc(e.name)}</span><br><span class="d">${esc([e.id, e.dept, e.table ? "第 " + e.table + " 桌" : ""].filter(Boolean).join("・"))}</span></span><span class="tag${st ? " in" : ""}">${st ? "已報到 " + esc(hhmm(st.time)) : "未報到"}</span></button></li>`;
+  }).join("");
+  ul.querySelectorAll("button").forEach(b => b.onclick = () => pick(hits[+b.dataset.i]));
+}
+
+function pick(emp) {
+  const prev = statusOf(emp.id);
+  show(prev ? { kind: "dup", emp, prev } : { kind: "confirm", emp });
+  if (!matchMedia("(min-width: 900px)").matches) $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+$("q").addEventListener("input", renderHits);
+$("q").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const raw = $("q").value.trim(), t = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!raw) return;
+  // 條碼掃描槍掃到的是報到代碼：直接報到
+  if (byToken.has(t) || /[?&]t=/.test(raw)) { $("q").value = ""; renderHits(); onCode(raw); return; }
+  const exact = byId.get(raw) || employees.find(x => norm(x.id) === norm(raw));
+  const hits = search(raw);
+  if (exact) pick(exact);
+  else if (hits.length === 1) pick(hits[0]);
+});
+
+/* ---------- 相機掃描 ---------- */
+let stream = null, scanning = false, resumeCam = false, cams = [], camIdx = -1, lastFrame = 0, lastHit = { t: "", at: 0 };
+const video = $("video"), canvas = $("canvas"), ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+async function startCam() {
+  stopCam();
+  unlockAudio();
+  $("camMsg").textContent = "相機啟動中…";
+  try {
+    const video_ = camIdx >= 0 && cams[camIdx] ? { deviceId: { exact: cams[camIdx].deviceId } } : { facingMode: { ideal: "environment" } };
+    stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: Object.assign({ width: { ideal: 1280 }, height: { ideal: 720 } }, video_) });
+    video.srcObject = stream;
+    await video.play();
+    if (!cams.length) {
+      cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput");
+      const cur = stream.getVideoTracks()[0].getSettings().deviceId;
+      camIdx = Math.max(0, cams.findIndex(c => c.deviceId === cur));
+    }
+    $("camSwitch").hidden = cams.length < 2;
+    $("camOff").hidden = true; $("frame").hidden = false;
+    $("camBtn").textContent = "關閉相機"; $("camBtn").classList.remove("primary");
+    scanning = true;
+    requestAnimationFrame(tick);
+  } catch (e) {
+    stopCam();
+    $("camMsg").textContent = e && e.name === "NotAllowedError"
+      ? "沒有相機權限。請在瀏覽器網址列旁的設定允許使用相機，再按「開啟相機」。"
+      : "無法開啟相機。可以改用下方人工輸入，或接上條碼掃描槍。";
+  }
+}
+
+function stopCam() {
+  scanning = false;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  video.srcObject = null;
+  $("camOff").hidden = false; $("frame").hidden = true;
+  $("camMsg").textContent = "點下方「開啟相機」開始掃描";
+  $("camBtn").textContent = "開啟相機"; $("camBtn").classList.add("primary");
+}
+
+function tick(now) {
+  if (!scanning) return;
+  if (video.readyState >= 2 && now - lastFrame > 120) {
+    lastFrame = now;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (vw && vh) {
+      const s = Math.min(1, 720 / Math.max(vw, vh)), w = Math.round(vw * s), h = Math.round(vh * s);
+      if (canvas.width !== w) canvas.width = w;
+      if (canvas.height !== h) canvas.height = h;
+      ctx.drawImage(video, 0, 0, w, h);
+      const code = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: "dontInvert" });
+      if (code && code.data) {
+        // 同一張 QR Code 停在鏡頭前時，4 秒內不重複處理
+        const t = code.data.trim();
+        if (t !== lastHit.t || now - lastHit.at > 4000) onCode(t);
+        lastHit = { t, at: now };
+      }
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+$("camBtn").onclick = () => scanning ? stopCam() : startCam();
+$("camSwitch").onclick = () => { camIdx = (camIdx + 1) % cams.length; startCam(); };
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && scanning) { stopCam(); resumeCam = true; }
+  else if (!document.hidden && resumeCam) { resumeCam = false; startCam(); }
+});
+
+/* ---------- 提示音 ---------- */
+let actx = null;
+function unlockAudio() {
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch (e) {}
+}
+function beep(kind) {
+  try {
+    unlockAudio();
+    const notes = kind === "ok" ? [[880, .09], [1320, .16]] : kind === "dup" ? [[620, .12], [620, .12]] : [[200, .4]];
+    let t = actx.currentTime + .01;
+    for (const [f, d] of notes) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = kind === "err" ? "square" : "sine";
+      o.frequency.value = f;
+      g.gain.setValueAtTime(.0001, t);
+      g.gain.exponentialRampToValueAtTime(kind === "err" ? .15 : .35, t + .01);
+      g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      o.connect(g).connect(actx.destination);
+      o.start(t); o.stop(t + d + .02);
+      t += d + .05;
+    }
+  } catch (e) {}
+  try { navigator.vibrate && navigator.vibrate(kind === "ok" ? 80 : kind === "dup" ? [80, 60, 80] : 300); } catch (e) {}
+}
+
+/* ---------- 登入／登出 ---------- */
+function showLogin(msg) {
+  $("app").hidden = true; $("login").hidden = false;
+  $("loginTitle").textContent = EVENT + " 報到台";
+  $("station").value = $("station").value || store.get(KEYS.station, "");
+  const m = $("loginMsg");
+  m.hidden = !msg; m.textContent = msg || "";
+}
+
+function showApp() {
+  $("login").hidden = true; $("app").hidden = false;
+  $("evName").textContent = EVENT;
+  $("stName").textContent = auth.station;
+  document.title = EVENT + "・" + auth.station;
+  const cache = store.get(KEYS.cache, null);
+  if (cache) { setData(cache.employees, cache.server); lastSync = cache.at || 0; }
+  renderCount(); renderRecent();
+  show({ kind: "idle" });
+  sync();
+}
+
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  unlockAudio();
+  if (!API) { showLogin("還沒設定 Apps Script 網址：請在 year-end-party/config.js 填入 sheetApi（步驟見 SETUP.md）。"); return; }
+  const pw = $("pw").value, station = $("station").value.trim();
+  $("loginBtn").disabled = true; $("loginBtn").textContent = "登入中…";
+  auth = { pw, station };
+  try {
+    await api({ action: "login" });
+    store.set(KEYS.auth, auth);
+    store.set(KEYS.station, station);
+    $("pw").value = "";
+    showApp();
+  } catch (err) {
+    auth = null;
+    showLogin({ unauthorized: "密碼不正確。", no_password: "還沒設定工作人員密碼：請在試算表選單「尾牙報到」→「設定工作人員密碼」。", network: "連不上 Apps Script，請確認網路，以及部署時「誰可以存取」選了「所有人」。" }[err.code] || "登入失敗：" + (err.message || err.code));
+  } finally {
+    $("loginBtn").disabled = false; $("loginBtn").textContent = "登入";
+  }
+});
+
+function logout(forced, msg) {
+  if (!forced) {
+    const warn = pending.length ? `\n\n⚠️ 還有 ${pending.length} 筆離線報到沒有上傳，登出後會遺失！` : "";
+    if (!confirm("確定要登出嗎？登出會清除這台裝置上的名單暫存。" + warn)) return;
+    store.del(KEYS.pending); pending = [];
+  }
+  stopCam();
+  auth = null;
+  store.del(KEYS.auth); store.del(KEYS.cache); store.del(KEYS.recent);
+  recent = []; setData([], {});
+  showLogin(msg);
+}
+$("logout").onclick = () => logout(false);
+
+window.addEventListener("online", sync);
+setInterval(() => { if (auth && !document.hidden) sync(); }, POLL_MS);
+
+if (auth && API) showApp(); else showLogin();
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>

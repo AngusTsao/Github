@@ -27,6 +27,13 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html config.js manifest.webmanifest sw.js icons cat-quiz street-cat-quiz _site/
+          # 尾牙報到：網站只放網頁，Apps Script、Excel 巨集與範本留在 repo 裡下載
+          mkdir _site/year-end-party
+          cp -r year-end-party/index.html year-end-party/ticket.html year-end-party/config.js year-end-party/sw.js year-end-party/vendor _site/year-end-party/
+          sed -i "s#src=\"config.js\"#src=\"config.js?v=${GITHUB_SHA::7}\"#" _site/year-end-party/index.html _site/year-end-party/ticket.html
+          grep -q "config.js?v=${GITHUB_SHA::7}" _site/year-end-party/ticket.html
+          sed -i "s/const CACHE = \"yep-[^\"]*\"/const CACHE = \"yep-${GITHUB_SHA::7}\"/" _site/year-end-party/sw.js
+          grep -q "yep-${GITHUB_SHA::7}" _site/year-end-party/sw.js
           # 巷口的貓：每次部署讓瀏覽器重新讀取 config.js（避免拿到舊的設定）
           sed -i "s#src=\"config.js\"#src=\"config.js?v=${GITHUB_SHA::7}\"#" _site/cat-quiz/index.html
           grep -q "config.js?v=${GITHUB_SHA::7}" _site/cat-quiz/index.html
