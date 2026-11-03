@@ -106,6 +106,7 @@ main { flex: 1; padding: 16px var(--gr) calc(110px + var(--sb)) var(--gl); width
 }
 .bar .btn { padding: 12px 6px; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: var(--card); }
 .btn:disabled { opacity: .45; cursor: default; }
 .btn.big { flex: 1.4; }
 
@@ -145,7 +146,7 @@ main { flex: 1; padding: 16px var(--gr) calc(110px + var(--sb)) var(--gl); width
 .hint { text-align: center; font-size: 13px; color: #9AA1AA; margin: 0; padding: 0 16px; min-height: 20px; }
 
 /* sheet (export) */
-.scrim { position: fixed; inset: 0; z-index: 30; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; }
+.scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; }
 .sheet {
   background: var(--card); width: 100%; max-width: 520px; border-radius: 20px 20px 0 0;
   padding: 20px var(--gr) calc(20px + var(--sb)) var(--gl); max-height: 92dvh; overflow: auto;
@@ -286,6 +287,16 @@ main { flex: 1; padding: 16px var(--gr) calc(110px + var(--sb)) var(--gl); width
   </div>
 </div>
 
+<div class="scrim" id="confirmScrim" hidden>
+  <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="cfMsg">
+    <h2 id="cfMsg" style="font-size:18px"></h2>
+    <div class="row" style="display:flex;gap:10px">
+      <button class="btn" id="cfCancel">取消</button>
+      <button class="btn danger" id="cfOk">刪除</button>
+    </div>
+  </div>
+</div>
+
 <div class="busy" id="busy" hidden><div><span class="spin"></span><span id="busyText">處理中…</span></div></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -300,10 +311,20 @@ const FULL = [[0, 0], [1, 0], [1, 1], [0, 1]];
 const $ = id => document.getElementById(id);
 let pages = [];                // {id, order, src, srcW, srcH, corners, rot, filter, out, outW, outH, url}
 let ed = null;                 // editor state
+let TOP = true; try { TOP = window.self === window.top; } catch { TOP = false; }
+const downloadsCap = (window.claude && window.claude.use) ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
 
 /* ============ small helpers ============ */
 const tick = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 function busy(text) { if (text === false) { $("busy").hidden = true; return; } $("busyText").textContent = text || "處理中…"; $("busy").hidden = false; }
+function askConfirm(msg, okLabel) {
+  return new Promise(res => {
+    $("cfMsg").textContent = msg; $("cfOk").textContent = okLabel; $("confirmScrim").hidden = false;
+    const done = v => { $("confirmScrim").hidden = true; $("cfOk").onclick = $("cfCancel").onclick = null; res(v); };
+    $("cfOk").onclick = () => done(true); $("cfCancel").onclick = () => done(false);
+    $("cfCancel").focus();
+  });
+}
 let toastTimer;
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -655,7 +676,7 @@ async function movePage(i, dir) {
   [pages[i], pages[j]] = [pages[j], pages[i]]; renderList(); await saveOrder();
 }
 async function removePage(p, ask) {
-  if (ask && !confirm(`刪除第 ${pages.indexOf(p) + 1} 頁？`)) return false;
+  if (ask && !(await askConfirm(`刪除第 ${pages.indexOf(p) + 1} 頁？`, "刪除"))) return false;
   pages = pages.filter(x => x !== p); if (p.url) URL.revokeObjectURL(p.url);
   await deletePage(p.id); await saveOrder(); renderList(); return true;
 }
@@ -664,7 +685,7 @@ async function removePage(p, ask) {
 function openEditor(page, isNew) {
   ed = { page, isNew, step: "crop", corners: page.corners.map(c => c.slice()), rot: page.rot, filter: page.filter, src: null, warped: null, drag: -1 };
   $("editor").hidden = false; document.body.style.overflow = "hidden";
-  history.pushState({ editor: 1 }, "");
+  if (TOP) history.pushState({ editor: 1 }, "");
   showCrop();
   const url = URL.createObjectURL(page.src); ed.srcUrl = url;
   $("cropImg").onload = () => { layoutCrop(); };
@@ -675,7 +696,7 @@ function closeEditor(fromPop) {
   if (ed.srcUrl) URL.revokeObjectURL(ed.srcUrl);
   freeCanvas(ed.src); freeCanvas(ed.warped);
   ed = null; $("editor").hidden = true; document.body.style.overflow = ""; $("cropImg").removeAttribute("src");
-  if (!fromPop) history.back();
+  if (!fromPop && TOP) history.back();
 }
 function showCrop() {
   ed.step = "crop";
@@ -836,9 +857,9 @@ function segVal(id) { return document.querySelector(`#${id} [aria-pressed="true"
 let pdfOut = null;
 function openExport() {
   $("exName").value = defaultName(); $("exResult").hidden = true; pdfOut = null;
-  $("exportScrim").hidden = false; history.pushState({ sheet: 1 }, "");
+  $("exportScrim").hidden = false; if (TOP) history.pushState({ sheet: 1 }, "");
 }
-function closeExport(fromPop) { $("exportScrim").hidden = true; pdfOut = null; if (!fromPop) history.back(); }
+function closeExport(fromPop) { $("exportScrim").hidden = true; pdfOut = null; if (!fromPop && TOP) history.back(); }
 document.querySelectorAll(".seg").forEach(seg => seg.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); $("exResult").hidden = true; pdfOut = null;
@@ -865,8 +886,14 @@ $("exMake").onclick = async () => {
   } catch (e) { console.error(e); toast("產生 PDF 失敗：" + e.message); }
   busy(false);
 };
-$("exDownload").onclick = () => {
+$("exDownload").onclick = async () => {
   if (!pdfOut) return;
+  const cap = await downloadsCap;
+  if (cap) {  // inside the Claude viewer: plain download links are blocked there
+    try { await cap.save({ filename: fileName(), data: pdfOut.blob }); toast("已儲存 " + fileName()); }
+    catch (e) { if (e && e.code !== "declined") toast("無法儲存：" + (e.message || e.code)); }
+    return;
+  }
   const a = document.createElement("a"), url = URL.createObjectURL(pdfOut.blob);
   a.href = url; a.download = fileName(); document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -886,7 +913,7 @@ $("btnAlbum").onclick = () => $("inAlbum").click();
 $("btnPdf").onclick = () => { if (pages.length) openExport(); };
 for (const id of ["inCam", "inAlbum"]) $(id).addEventListener("change", e => { const f = [...e.target.files]; e.target.value = ""; addFiles(f); });
 $("clearAll").onclick = async () => {
-  if (!confirm(`清除全部 ${pages.length} 頁？清除後無法復原。`)) return;
+  if (!(await askConfirm(`清除全部 ${pages.length} 頁？清除後無法復原。`, "全部清除"))) return;
   for (const p of pages) { if (p.url) URL.revokeObjectURL(p.url); await deletePage(p.id); }
   pages = []; renderList();
 };
